@@ -1,0 +1,23 @@
+flowchart TD
+    A[Target Job Sources] --> B[Conservative Source Audit]
+    B --> C[Access Check]
+    B --> D[ATS Detection]
+    B --> E[Structured Data Detection]
+    B --> F[Login or Challenge Signals]
+    B --> G[Email Alert Detection]
+    C --> H[Evidence Record]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+    H --> I{Recommended Acquisition Mode}
+    I -->|Stable structured access| J[AUTO]
+    I -->|Best through alerts| K[EMAIL]
+    I -->|User initiated| L[MANUAL_BATCH]
+    I -->|Discover through search| M[SEARCH_ONLY]
+    I -->|Access restricted| N[RESTRICTED]
+    J --> O[Source Registry Input]
+    K --> O
+    L --> O
+    M --> O
+    N --> O

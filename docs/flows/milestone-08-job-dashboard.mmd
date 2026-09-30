@@ -1,0 +1,28 @@
+flowchart TD
+  A[User logs in] --> B[Jobs dashboard]
+  B --> C[Filter/search jobs]
+  C --> D[Open canonical job]
+  D --> E[Mark visited]
+  D --> F[View company/location/freshness/status]
+  D --> G[View all safe source listing fields]
+  D --> H[Open official/source URL]
+  D --> I[Save / Ignore / Archive]
+  D --> J[Add note]
+  D --> J1[Set personal expiry date]
+
+  B --> K[Add job manually]
+  K --> L[Validate title + company/URL/description]
+  L --> M[Private RawJobListing by default]
+  M --> N[Same ingestion/dedup pipeline]
+
+  B --> O[Profiles tab]
+  O --> P[Create search profile]
+  P --> Q[Keywords / countries / locations / freshness]
+
+  B --> R[Sources tab]
+  R --> S[View mode/health/listing count]
+  R --> T[Analyse and add a new source]
+  R --> U[Choose profile]
+  U --> V[Follow / unfollow source]
+  V --> W[Shared SourceSchedule recalculated]
+  S --> X[Run permitted source now]

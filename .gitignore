@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+.DS_Store
+
+# Prisma / local databases
+*.db
+*.db-journal
+
+# Python research tools
+research/source-audit/.venv/
+research/source-audit/**/__pycache__/
+research/source-audit/.pytest_cache/
+research/source-audit/results/*
+!research/source-audit/results/.gitkeep
+research/source-audit/reports/*
+!research/source-audit/reports/.gitkeep
+
+web/node_modules
+web/dist

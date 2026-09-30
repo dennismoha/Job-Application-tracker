@@ -1,0 +1,46 @@
+flowchart TD
+    P[Active Search Profile] --> J[Jobs Workspace]
+    P --> D[Dashboard]
+    P --> A[Applications]
+    P --> U[Universal Search]
+
+    U --> W[Wider Web Search]
+    U --> E[Email Alerts]
+    U --> B[Manual Source Batches]
+    U --> X[Browser Companion]
+
+    W --> I[Shared Ingestion Gate]
+    E --> I
+    B --> Q[Acquisition Queue]
+    Q --> I
+    X --> I
+
+    W -->|Track source| S[Job Sites / Source Audit]
+    S --> Q
+
+    I --> N[Normalize + Validate]
+    N --> F[Freshness]
+    F --> DD[Deduplicate]
+    DD --> CJ[Canonical Job + Listings]
+    CJ --> J
+
+    J --> CVC[CV Compare]
+    J --> PF[Profile Fit]
+    J --> R[Trust / Risk Evidence]
+    J --> AP[Apply]
+    CVC --> T[Truthful CV Tailoring]
+    T --> AP
+    AP --> A
+
+    A --> EV[Application Event History]
+    EV --> AN[Analytics]
+    CJ --> AN
+    Q --> AN
+
+    D -->|Review queue| J
+    D -->|Follow-up queue| A
+    D -->|Source issues| S
+
+    GS[Global Search] -->|Exact job| J
+    GS -->|Exact source| S
+    GS -->|Exact application| A

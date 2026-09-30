@@ -1,0 +1,21 @@
+flowchart TD
+    A[Developer Starts Project] --> B[Load Environment]
+    B --> C[Start Express API]
+    C --> D[Initialize Shared Prisma Client]
+    D --> E[(PostgreSQL)]
+    C --> F[Register HTTP Middleware]
+    F --> G[Register API Routes]
+    G --> H[/health]
+    H --> I[Database Connectivity Check]
+    I --> E
+    E --> J{Database Reachable?}
+    J -->|Yes| K[200 Healthy]
+    J -->|No| L[Central Error Handler]
+
+    M[Prisma Schema] --> N[Migration]
+    N --> E
+    O[Seed Script] --> P[Job Categories]
+    P --> E
+
+    Q[Milestone Documentation] --> R[Mermaid .mmd Files]
+    R --> S[Local Mermaid Viewer]

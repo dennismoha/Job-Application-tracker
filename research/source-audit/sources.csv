@@ -1,0 +1,47 @@
+id,name,source_type,url,subjects,initial_mode,priority,audit_batch,notes
+1,Eteach International,education_board,https://www.eteach.com/international/,M|C|S|H,AUTO+EMAIL,P1,1,Public international teaching listings
+2,Teacher Horizons,recruiter,https://www.teacherhorizons.com/countries/middle-east-united-arab-emirates,M|C|S|H,ACCOUNT+EMAIL,P1,1,Profile/adviser-led international teacher recruitment
+3,Teaching Nomad,recruiter,https://jobs.teachingnomad.com/,M|C|S|H,AUTO+EMAIL,P1,1,Public jobs plus candidate profile
+4,ASQ International,recruiter,https://jobs.asq-international.com/,M|S|H,AUTO+EMAIL,P1,1,Public international teacher vacancies
+5,Schrole,recruitment_platform,https://www.schrole.com/jobs-for-teachers/middle-east/,M|C|S|H,ACCOUNT+EMAIL,P1,1,Account-based international school marketplace
+6,ISS EDUrecruit,recruitment_platform,https://www.iss.edu/for-individuals/find-a-job/find-a-teaching-job,M|S|H,ACCOUNT+EMAIL,P1,1,Candidate profile and international school openings
+7,Search Associates,recruitment_platform,https://www.searchassociates.com/,M|C|S|H,ACCOUNT+EMAIL,P1,1,Private candidate database and recruitment fairs
+8,Global Recruitment Collaborative,recruitment_platform,https://www.grcfair.org/,M|C|S|H,ACCOUNT+EMAIL,P1,1,International school recruitment fairs and database
+9,Worldwide Teaching,recruiter,https://www.worldwide-teaching.com/,M|C|S|H,EMAIL,P2,0,International teacher recruitment
+10,Step2Teaching,recruiter,https://www.step2teaching.com/,M|S|H,EMAIL,P2,0,Teacher recruitment and profile system
+11,UNI Overseas Teaching Services,recruitment_platform,https://teachoverseas.uni.edu/,M|C|S|H,ACCOUNT+EMAIL,P2,0,International school jobs and fairs
+12,Fortes Education,education_group,https://careers.forteseducation.com/CurrentOpening.aspx?FCO=1,M|C|S|H,AUTO,P1,1,Direct group careers portal
+13,LEAMS Education,education_group,https://leamseducation.com/career/,M|C|S|H,AUTO,P1,1,Direct public vacancies
+14,BEAM / Schools of Creative Science,education_group,https://careers.beam.co.ae/,M|C|S|H,AUTO,P1,1,Hosted public careers portal
+15,Liwa Education,education_group,https://liwacareers.com/,M|C|S|H,MANUAL_BATCH+EMAIL,P1,1,JS-heavy vacancy experience; CV route available
+16,Emirates National Schools,education_group,https://ens.sch.ae/careers,M|S|H,EMAIL,P1,1,Direct careers/CV route with emphasis on science and mathematics
+17,SABIS Careers,education_group,https://careers.sabis.net/,M|C|S|H,AUTO,P1,1,Structured international careers portal with UAE locations
+18,International Schools Partnership,education_group,https://careers.internationalschoolspartnership.com/search/jobs/in/dubai,M|S|H,AUTO,P1,1,Structured group careers portal
+19,Innoventures Education,education_group,https://www.innoventureseducation.com/careers-ive,M|C|S|H,EMAIL+MANUAL_BATCH,P1,1,Group careers page delegates to school pages and accepts CVs
+20,Esol Education,education_group,https://www.esoleducation.com/careers/vacancies/teaching-vacancies,M|C|S|H,AUTO,P1,1,Public UAE school vacancy list
+21,Nord Anglia Education,education_group,https://careers.nordangliaeducation.com/,M|C|S|H,AUTO+EMAIL,P1,0,Global school group careers portal
+22,Bloom Education,education_group,https://www.bloomeducation.com/careers/apply/,M|S|H,AUTO,P1,0,UAE education group direct careers
+23,Scholars International Group,education_group,https://sigeducation.com/careers/,M|S|H,EMAIL,P2,0,Direct group recruitment
+24,Woodlem Education,education_group,https://woodlemeducation.com/career/,M|C|S|H,MANUAL_BATCH,P2,0,Public school-by-school openings page
+25,Indian High Group of Schools,education_group,https://careers.ihsdubai.org/,M|C|S|H,MANUAL_BATCH,P2,0,Direct teacher application form with subject selector
+26,Universal American School Dubai,school,https://universalamericanschooldubai.schoolrecruiter.com/,M|C|S|H,AUTO,P1,1,Public SchoolRecruiter careers site
+27,Amity International School Abu Dhabi,school,https://amityabudhabi.com/careers/,M|C|S,EMAIL+MANUAL_BATCH,P1,0,Direct school recruitment
+28,International Community Schools,school_group,https://www.icschools.ae/careers/,M|S|H,AUTO,P1,0,Abu Dhabi school group current opportunities
+29,Al Yasat Private School,school,https://www.alyasat-school.com/en/quicklinks/careers.html,M|C|S|H,MANUAL_BATCH,P1,1,Direct application form
+30,Manor Hall International School,school,https://manorhallschool.com/careers/,M|C|S|H,EMAIL+MANUAL_BATCH,P1,0,Always accepts CVs for future positions
+31,Royal Grammar School Guildford Dubai,school,https://www.rgsgd.com/careers/,M|C|S|H,AUTO,P1,0,Direct school current vacancies page
+32,British School Al Khubairat,school,https://www.britishschool.sch.ae/vacancies,M|C|S|H,AUTO+EMAIL,P1,0,Direct school vacancies
+33,American International School in Abu Dhabi,school,https://www.aisa.sch.ae/about/employment-opportunities,M|C|S|H,EMAIL+ACCOUNT,P1,0,Uses international recruiter platforms and direct information
+34,Sharjah American International School,school_group,https://www.saissharjah.com/careers,M|S|H,AUTO+EMAIL,P1,0,Direct group careers
+35,Repton Dubai,school,https://www.reptondubai.org/careers/,M|C|S|H,AUTO+EMAIL,P2,0,Direct current vacancies
+36,Dubai College,school,https://www.dubaicollege.org/recruitment,M|C|S,SEARCH_ONLY,P2,0,Official page delegates teaching vacancy discovery to Eteach/TES
+37,Horizon English School,school,https://horizonschooldubai.com/careers-at-hes/,M|S|H,AUTO,P2,0,Primary school current vacancies
+38,Arcadia Global School,school,https://arcadia.sch.ae/careers/,M|C|S|H,AUTO,P2,0,Direct school careers
+39,International Indian School Abu Dhabi,school,https://www.iischoolabudhabi.com/careers/,M|C|S|H,EMAIL,P2,0,Direct CV email plus current openings
+40,GulfTalent,general_job_board,https://www.gulftalent.com/uae/jobs/category/education,M|C|S|H,EMAIL+SEARCH_ONLY,P1,1,Use for discovery; verify on employer source
+41,Glassdoor UAE,general_job_board,https://www.glassdoor.com/Job/uae-teacher-jobs-SRCH_IL.0%2C3_IN6_KO4%2C11.htm,M|C|S|H,EMAIL+SEARCH_ONLY,P2,0,Large job platform; alerts preferred over scraping
+42,DrJobs UAE,general_job_board,https://drjobs.ae/teacher-jobs,M|C|S|H,EMAIL+SEARCH_ONLY,P2,0,UAE-focused discovery
+43,Foundit Gulf,general_job_board,https://www.founditgulf.com/search/teacher-jobs,M|C|S|H,EMAIL,P3,0,Secondary discovery
+44,Jooble UAE,general_job_board,https://ae.jooble.org/jobs-teacher,M|C|S|H,EMAIL+SEARCH_ONLY,P3,0,Aggregator; verify canonical source
+45,Careerjet UAE,general_job_board,https://www.careerjet.ae/teacher-jobs.html,M|C|S|H,EMAIL+SEARCH_ONLY,P3,0,Aggregator; verify canonical source
+46,GrabJobs UAE,general_job_board,https://grabjobs.co/uae/browse-jobs/education-training,M|C|S|H,SEARCH_ONLY,P3,0,Secondary discovery

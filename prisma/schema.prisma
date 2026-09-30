@@ -1,0 +1,1758 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  JOB_BOARD
+  COMPANY_CAREERS
+  ORGANIZATION_WEBSITE
+  ATS
+  RECRUITER
+  NEWSLETTER
+  OTHER
+  UNCLASSIFIED
+}
+
+enum CollectionCapability {
+  CRAWLABLE
+  RESTRICTED
+  MANUAL_ONLY
+  EMAIL_ONLY
+  SEARCH_ONLY
+  UNKNOWN
+  DISABLED
+}
+
+enum JobShareDelivery {
+  EMAIL_WEBHOOK
+  EMAIL_CLIENT
+}
+
+enum AcquisitionMethod {
+  CRAWLER
+  BROWSER_COMPANION
+  UNIVERSAL_SEARCH
+  EMAIL
+  MANUAL
+  API
+  IMPORT
+}
+
+enum SourceAccessState {
+  UNKNOWN
+  OPEN
+  REQUIRES_LOGIN
+  CHALLENGED
+  BLOCKED
+}
+
+enum SourceHealthStatus {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  CHALLENGED
+  PAUSED
+}
+
+enum CircuitState {
+  CLOSED
+  OPEN
+  HALF_OPEN
+}
+
+enum RiskLevel {
+  UNKNOWN
+  GREEN
+  YELLOW
+  ORANGE
+  RED
+}
+
+enum AuditConfidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RunType {
+  SCHEDULED_CRAWL
+  MANUAL_CRAWL
+  EMAIL_INGESTION
+  WEB_SEARCH
+  MANUAL_JOB_ENTRY
+  SOURCE_AUDIT
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  PARTIAL
+  FAILED
+  RATE_LIMITED
+  CHALLENGED
+  SKIPPED
+  CANCELLED
+}
+
+enum IngestionStatus {
+  RECEIVED
+  EXTRACTING
+  NORMALIZED
+  VALIDATED
+  DEDUPLICATED
+  PERSISTED
+  FAILED
+  QUARANTINED
+}
+
+enum ExtractionMethod {
+  API
+  ATS
+  RSS
+  JSON_LD
+  SOURCE_PARSER
+  GENERIC_HTML
+  LLM
+  MANUAL
+}
+
+enum JobStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+  SCAM
+  UNKNOWN
+}
+
+enum ListingStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+  REMOVED
+  UNKNOWN
+}
+
+enum FreshnessStatus {
+  NEW
+  RECENT
+  AGING
+  OLD
+  VERY_OLD
+  UNKNOWN
+}
+
+enum DateConfidence {
+  EXACT
+  INFERRED
+  UNKNOWN
+}
+
+enum RemoteType {
+  ONSITE
+  HYBRID
+  REMOTE
+  UNSPECIFIED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  TEMPORARY
+  INTERNSHIP
+  OTHER
+  UNSPECIFIED
+}
+
+enum SalaryPeriod {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  UNSPECIFIED
+}
+
+enum UserJobDisposition {
+  NONE
+  SAVED
+  IGNORED
+  ARCHIVED
+}
+
+enum ApplicationStage {
+  APPLIED
+  SCREENING
+  INTERVIEW_SCHEDULED
+  INTERVIEWED
+  SECOND_INTERVIEW
+  FINAL_INTERVIEW
+  OFFER
+  ACCEPTED
+  DECLINED
+  REJECTED
+  WITHDRAWN
+  NO_RESPONSE
+  CLOSED
+}
+
+enum ApplicationEventType {
+  APPLIED
+  RESPONSE_RECEIVED
+  SCREENING
+  INTERVIEW_SCHEDULED
+  INTERVIEW_ATTENDED
+  SECOND_INTERVIEW
+  FINAL_INTERVIEW
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  OFFER_DECLINED
+  REJECTED
+  WITHDRAWN
+  NO_RESPONSE
+  NOTE
+  CLOSED
+}
+
+enum EligibilityStatus {
+  ELIGIBLE
+  POSSIBLY_ELIGIBLE
+  INELIGIBLE
+  UNKNOWN
+}
+
+enum RiskReasonType {
+  USER_MARKED
+  REQUESTED_PAYMENT
+  SUSPICIOUS_EMAIL
+  FAKE_COMPANY
+  FAKE_JOB
+  DUPLICATE_SPAM
+  MISLEADING_JOB
+  EXPIRED_JOB
+  OTHER
+}
+
+enum EmailFreshness {
+  RECENT
+  OLD
+  MIXED
+  UNKNOWN
+}
+
+enum DeduplicationMethod {
+  EXTERNAL_ID
+  JOB_REFERENCE
+  APPLY_URL
+  FINGERPRINT
+  FUZZY_MATCH
+  LLM
+  MANUAL
+}
+
+enum DeduplicationDecision {
+  SAME_JOB
+  DIFFERENT_JOB
+  UNCERTAIN
+}
+
+enum JobStatusEventType {
+  DISCOVERED
+  UPDATED
+  EXPIRED
+  CLOSED
+  REOPENED
+  MARKED_SCAM
+}
+
+enum JobVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum AiTaskType {
+  EXTRACTION
+  PROFILE_MATCH
+  ELIGIBILITY
+  SUMMARY
+  DEDUPLICATION
+  SOURCE_REVIEW
+  BROWSER_PAGE_ANALYSIS
+  CV_STRUCTURE
+  CV_REQUIREMENT_EXTRACTION
+  CV_MATCH
+  CV_TAILORING
+  COVER_LETTER
+  APPLICATION_ASSISTANT
+  INTERVIEW_PREP
+  MARKET_INTELLIGENCE
+}
+
+enum EvidenceType {
+  ACHIEVEMENT
+  PROJECT
+  RESPONSIBILITY
+  CERTIFICATION
+  TECHNOLOGY
+  TEACHING_ACHIEVEMENT
+  METRIC
+  EDUCATION
+  LANGUAGE
+  OTHER
+}
+enum ApplicationPackStatus {
+  DRAFT
+  READY
+  SUBMITTED
+  ARCHIVED
+}
+enum CoverLetterStatus {
+  DRAFT
+  REVIEWED
+  FINAL
+}
+enum FollowUpActionType {
+  WAIT
+  FOLLOW_UP
+  THANK_YOU
+  PREPARE_INTERVIEW
+  DECIDE_OFFER
+  NONE
+}
+enum FollowUpState {
+  SUGGESTED
+  DONE
+  DISMISSED
+}
+enum OfferStatus {
+  RECEIVED
+  NEGOTIATING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+enum PriorityBucket {
+  HIGH_ATTENTION
+  REVIEW
+  LATER
+  LOW_PRIORITY
+}
+enum SearchCampaignStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+enum SmartNotificationType {
+  STRONG_MATCH
+  CLOSING_SOON
+  SOURCE_RECOVERED
+  JOB_CHANGED
+  FOLLOW_UP_DUE
+  INTERVIEW_UPCOMING
+  OFFER_ACTION
+  CV_MATCH
+}
+enum SmartNotificationState {
+  UNREAD
+  READ
+  DISMISSED
+}
+
+
+enum CvSourceType {
+  UPLOADED
+  BUILDER
+  TAILORED
+}
+
+enum CvRequirementKind {
+  REQUIRED
+  PREFERRED
+  SKILL
+  OTHER
+}
+
+enum CvMatchStatus {
+  EVIDENCED
+  PARTIAL
+  NOT_EVIDENCED
+  NEEDS_CONFIRMATION
+  NOT_APPLICABLE
+}
+
+enum CvTailoringStatus {
+  DRAFT
+  READY
+  SAVED
+  DISCARDED
+}
+
+enum CvSuggestionStatus {
+  PENDING
+  ACCEPTED
+  EDITED
+  IGNORED
+}
+
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  name         String?
+  passwordHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profiles        SearchProfile[]
+  jobStates       UserJobState[]
+  applications    Application[]
+  notes           JobNote[]
+  riskReports     RiskReport[]
+  createdSources  Source[]          @relation("SourceCreatedBy")
+  sourceAccess    UserSourceAccess[]
+  emailIngestions EmailIngestion[]
+  sessions        UserSession[]
+  createdJobs     Job[]              @relation("JobCreatedBy")
+  sourceBatches   SourceBatch[]
+  aiUsage         AiUsage[]
+  browserCompanionTokens BrowserCompanionToken[]
+  cvs                    Cv[]
+  cvMatches              JobCvMatch[]
+  cvTailoringSessions    CvTailoringSession[]
+  crawlerConfigs CrawlerConfig[]
+  evidenceEntries EvidenceEntry[]
+  applicationPacks ApplicationPack[]
+  coverLetters CoverLetter[]
+  contacts Contact[]
+  followUps FollowUpSuggestion[]
+  offers Offer[]
+  searchCampaigns SearchCampaign[]
+  smartNotifications SmartNotification[]
+  jobPriorities JobPriority[]
+  jobShares JobShare[]
+}
+
+model UserSession {
+  id String @id @default(cuid())
+
+  userId    String
+  tokenHash String @unique
+
+  expiresAt DateTime
+  lastUsedAt DateTime @default(now())
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+
+
+model BrowserCompanionToken {
+  id String @id @default(cuid())
+
+  userId String
+  name   String
+
+  tokenHash   String @unique
+  tokenPrefix String
+
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
+model SearchProfile {
+  id     String @id @default(cuid())
+  userId String
+
+  name        String
+  description String?
+
+  keywords         String[] @default([])
+  excludedKeywords String[] @default([])
+  countries        String[] @default([])
+  locations        String[] @default([])
+
+  remoteOnly Boolean @default(false)
+
+  minimumSalary  Decimal? @db.Decimal(12, 2)
+  salaryCurrency String?
+
+  defaultFreshnessDays Int @default(7)
+  defaultExpiryDays    Int @default(30)
+
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categories    JobCategory[]       @relation("ProfileCategories")
+  subscriptions SourceSubscription[]
+  matches       JobProfileMatch[]
+  applications  Application[]
+  aiUsage       AiUsage[]
+  cvLinks       CvProfileLink[]
+  searchCampaigns SearchCampaign[]
+  jobPriorities JobPriority[]
+
+  @@index([userId])
+}
+
+model JobCategory {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+
+  parentId String?
+
+  parent   JobCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children JobCategory[] @relation("CategoryTree")
+
+  jobs     Job[]
+  profiles SearchProfile[] @relation("ProfileCategories")
+}
+
+model JobTag {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+
+  jobs Job[] @relation("JobTags")
+}
+
+model Company {
+  id String @id @default(cuid())
+
+  name           String
+  normalizedName String
+
+  websiteUrl String?
+  careersUrl String?
+  country    String?
+  city       String?
+
+  systemRiskLevel RiskLevel @default(UNKNOWN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs        Job[]
+  sourceLinks OrganizationSource[]
+  riskReports RiskReport[]
+
+  @@index([normalizedName])
+}
+
+model Source {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+
+  sourceType            SourceType
+  collectionCapability  CollectionCapability @default(UNKNOWN)
+  accessState           SourceAccessState @default(UNKNOWN)
+  baseUrl               String
+  normalizedDomain      String? @unique
+  careersUrl            String?
+  createdByUserId       String?
+  systemOwned           Boolean @default(false)
+
+  requiresLogin        Boolean @default(false)
+  antiBotObserved      Boolean @default(false)
+  emailAlertsAvailable Boolean @default(false)
+  emailAlertsUrl       String?
+  accountUrl           String?
+
+  defaultIntervalMinutes Int @default(1440)
+  minimumRequestDelayMs  Int @default(2000)
+  maxRequestsPerRun      Int @default(20)
+
+  systemRiskLevel RiskLevel @default(UNKNOWN)
+  lastAuditedAt    DateTime?
+  active           Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User? @relation("SourceCreatedBy",fields: [createdByUserId],references: [id],onDelete: SetNull)
+
+  audits          SourceAudit[]
+  schedule        SourceSchedule?
+  health          SourceHealth?
+  subscriptions   SourceSubscription[]
+  runs            AcquisitionRun[]
+  ingestions      JobIngestion[]
+  listings        JobListing[]
+  userAccess      UserSourceAccess[]
+  riskReports     RiskReport[]
+  emailIngestions EmailIngestion[]
+  batchItems      SourceBatchItem[]
+  crawlerConfigs CrawlerConfig[]
+  organizationLinks OrganizationSource[]
+  foundApplications Application[] @relation("ApplicationFoundSource")
+  appliedApplications Application[] @relation("ApplicationAppliedSource")
+
+  @@index([sourceType])
+  @@index([collectionCapability])
+  @@index([active])
+}
+
+model OrganizationSource {
+  id String @id @default(cuid())
+
+  companyId String
+  sourceId  String
+
+  isOfficial Boolean @default(false)
+  verified   Boolean @default(false)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  source  Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, sourceId])
+  @@index([sourceId])
+  @@index([companyId])
+}
+
+model UserSourceAccess {
+  id String @id @default(cuid())
+
+  userId   String
+  sourceId String
+
+  accountExists         Boolean @default(false)
+  emailAlertsSubscribed Boolean @default(false)
+  usernameHint          String?
+  notes                 String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourceId])
+}
+
+model SourceSchedule {
+  id String @id @default(cuid())
+
+  sourceId String @unique
+
+  enabled         Boolean @default(true)
+  intervalMinutes Int     @default(1440)
+
+  nextRunAt           DateTime?
+  lastRunAt           DateTime?
+  lastSuccessfulRunAt DateTime?
+  pausedUntil         DateTime?
+
+  consecutiveFailures Int          @default(0)
+  circuitState        CircuitState @default(CLOSED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  runs   AcquisitionRun[]
+
+  @@index([enabled, nextRunAt])
+}
+
+model CrawlerConfig {
+  id String @id @default(cuid())
+
+  sourceId        String
+  createdByUserId String
+  name            String
+  description     String?
+
+  enabled         Boolean @default(true)
+  intervalMinutes Int     @default(1440)
+  nextRunAt       DateTime?
+  lastRunAt       DateTime?
+  pausedUntil     DateTime?
+
+  keywords   String[] @default([])
+  locations  String[] @default([])
+  categories String[] @default([])
+  subjects   String[] @default([])
+
+  maximumPages       Int @default(5)
+  maximumRequests    Int @default(20)
+  requestDelayMs     Int @default(2000)
+  consecutiveFailures Int @default(0)
+  circuitState       CircuitState @default(CLOSED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source    Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  runs      AcquisitionRun[]
+
+  @@index([sourceId, enabled])
+  @@index([createdByUserId, sourceId])
+  @@index([enabled, nextRunAt])
+}
+
+model SourceSubscription {
+  id String @id @default(cuid())
+
+  profileId String
+  sourceId  String
+
+  enabled                  Boolean @default(true)
+  preferredIntervalMinutes Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile SearchProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  source  Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, sourceId])
+  @@index([sourceId, enabled])
+}
+
+model SourceAudit {
+  id String @id @default(cuid())
+
+  sourceId String
+  auditedAt DateTime @default(now())
+
+  httpStatus     Int?
+  responseTimeMs Int?
+  finalUrl       String?
+
+  robotsAvailable Boolean?
+  robotsAllows    Boolean?
+
+  atsProvider String?
+
+  hasApi        Boolean @default(false)
+  hasRss        Boolean @default(false)
+  hasJsonLd     Boolean @default(false)
+  hasJobPosting Boolean @default(false)
+
+  isJavascriptHeavy      Boolean @default(false)
+  requiresLogin          Boolean @default(false)
+  challengeDetected      Boolean @default(false)
+  emailAlertsAvailable   Boolean @default(false)
+  applicationLinksFound  Boolean @default(false)
+
+  recommendedCapability CollectionCapability
+  confidence      AuditConfidence @default(MEDIUM)
+  notes           String?
+  metadata        Json?
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId, auditedAt])
+}
+
+model SourceHealth {
+  id String @id @default(cuid())
+
+  sourceId String @unique
+
+  status SourceHealthStatus @default(UNKNOWN)
+
+  successRate         Float?
+  consecutiveFailures Int @default(0)
+
+  expectedListingCount Int?
+  lastListingCount     Int?
+
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  lastChallengeAt DateTime?
+
+  reason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+}
+
+model AcquisitionRun {
+  id String @id @default(cuid())
+
+  sourceId   String?
+  scheduleId String?
+  crawlerConfigId String?
+
+  runType RunType
+  status  RunStatus @default(QUEUED)
+
+  scheduledFor DateTime?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  attempt Int @default(1)
+
+  pagesRequested Int @default(0)
+
+  listingsFound     Int @default(0)
+  newListings       Int @default(0)
+  updatedListings   Int @default(0)
+  unchangedListings Int @default(0)
+  newJobs           Int @default(0)
+  duplicates        Int @default(0)
+  quarantined       Int @default(0)
+
+  httpStatus   Int?
+  errorCode    String?
+  errorMessage String?
+  metadata     Json?
+
+  lockedAt DateTime?
+  lockedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source   Source?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  schedule SourceSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  crawlerConfig CrawlerConfig? @relation(fields: [crawlerConfigId], references: [id], onDelete: SetNull)
+
+  ingestions JobIngestion[]
+  listings   JobListing[]
+
+  @@index([sourceId, status])
+  @@index([scheduleId, status])
+  @@index([crawlerConfigId, status])
+  @@index([scheduledFor])
+  @@index([status, createdAt])
+}
+
+model EmailIngestion {
+  id String @id @default(cuid())
+
+  userId   String
+  sourceId String?
+
+  messageId String @unique
+  sender    String?
+  subject   String?
+
+  receivedAt  DateTime
+  processedAt DateTime?
+
+  freshness EmailFreshness @default(UNKNOWN)
+
+  recentFolderAssigned Boolean @default(false)
+  oldFolderAssigned    Boolean @default(false)
+
+  jobCount    Int   @default(0)
+  rawMetadata Json?
+
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source   Source?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  ingestions JobIngestion[]
+
+  @@index([userId, receivedAt])
+  @@index([sourceId])
+}
+
+model JobIngestion {
+  id String @id @default(cuid())
+
+  sourceId         String?
+  acquisitionRunId String?
+  emailIngestionId String?
+
+  status           IngestionStatus   @default(RECEIVED)
+  extractionMethod ExtractionMethod?
+
+  externalId String?
+  sourceUrl  String?
+
+  rawPayload        Json
+  extractedPayload  Json?
+  normalizedPayload Json?
+
+  errorMessage       String?
+  processingAttempts Int @default(0)
+
+  discoveredAt DateTime @default(now())
+  processedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source         Source?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  acquisitionRun AcquisitionRun? @relation(fields: [acquisitionRunId], references: [id], onDelete: SetNull)
+  emailIngestion EmailIngestion? @relation(fields: [emailIngestionId], references: [id], onDelete: SetNull)
+
+  listings JobListing[]
+
+  @@index([status])
+  @@index([sourceId])
+  @@index([acquisitionRunId])
+}
+
+model Job {
+  id String @id @default(cuid())
+
+  companyId         String?
+  createdByUserId   String?
+  visibility        JobVisibility @default(PUBLIC)
+  primaryCategoryId String?
+
+  title           String
+  normalizedTitle String
+  summary         String?
+  description     String?
+
+  city         String?
+  country      String?
+  locationText String?
+
+  remoteType     RemoteType     @default(UNSPECIFIED)
+  employmentType EmploymentType @default(UNSPECIFIED)
+
+  salaryMin      Decimal?     @db.Decimal(12, 2)
+  salaryMax      Decimal?     @db.Decimal(12, 2)
+  salaryCurrency String?
+  salaryPeriod   SalaryPeriod @default(UNSPECIFIED)
+  salaryText     String?
+
+  officialApplyUrl String?
+
+  startDate    DateTime?
+  academicYear String?
+
+  status          JobStatus       @default(UNKNOWN)
+  freshnessStatus FreshnessStatus @default(UNKNOWN)
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  earliestPostedAt DateTime?
+  latestPostedAt   DateTime?
+  expiresAt        DateTime?
+  closedAt         DateTime?
+
+  fingerprint String?
+
+  systemRiskLevel RiskLevel @default(UNKNOWN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdBy User? @relation("JobCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  primaryCategory JobCategory? @relation(fields: [primaryCategoryId], references: [id], onDelete: SetNull)
+
+  tags          JobTag[] @relation("JobTags")
+  listings      JobListing[]
+  listingMatches JobListingMatch[]
+  userStates    UserJobState[]
+  applications  Application[]
+  notes         JobNote[]
+  profileMatches JobProfileMatch[]
+  riskReports   RiskReport[]
+  statusEvents  JobStatusEvent[]
+  aiUsage       AiUsage[]
+  requirements  JobRequirement[]
+  cvMatches     JobCvMatch[]
+  tailoringSessions CvTailoringSession[]
+  snapshots JobSnapshot[]
+  coverLetters CoverLetter[]
+  priorities JobPriority[]
+
+  @@index([normalizedTitle])
+  @@index([companyId])
+  @@index([visibility, createdByUserId])
+  @@index([status])
+  @@index([freshnessStatus])
+  @@index([firstSeenAt])
+  @@index([fingerprint])
+}
+
+model JobListing {
+  id String @id @default(cuid())
+
+  jobId             String
+  sourceId          String
+  acquisitionMethod AcquisitionMethod @default(MANUAL)
+  ingestionId       String?
+  acquisitionRunId String?
+
+  externalId   String?
+  requisitionId String?
+  listingKey   String
+
+  sourceUrl String?
+  normalizedUrl String? @unique
+  applyUrl  String?
+
+  rawTitle       String?
+  rawDescription String?
+  rawLocation    String?
+
+  postedAt             DateTime?
+  postedDateConfidence DateConfidence @default(UNKNOWN)
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  expiresAt DateTime?
+  closedAt  DateTime?
+
+  status ListingStatus @default(UNKNOWN)
+
+  contentHash String?
+  isOfficial Boolean @default(false)
+  isRepost   Boolean @default(false)
+
+  rawPayload Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  ingestion JobIngestion? @relation(fields: [ingestionId], references: [id], onDelete: SetNull)
+  acquisitionRun AcquisitionRun? @relation(fields: [acquisitionRunId], references: [id], onDelete: SetNull)
+
+  matchEvidence JobListingMatch?
+  applications  Application[]
+  revisions      JobListingRevision[]
+
+  @@unique([sourceId, listingKey])
+  @@index([jobId])
+  @@index([sourceId, postedAt])
+  @@index([acquisitionMethod, firstSeenAt])
+  @@index([status])
+  @@index([requisitionId])
+}
+
+model JobListingRevision {
+  id String @id @default(cuid())
+
+  listingId String
+  contentHash String
+  snapshot Json
+  detectedAt DateTime @default(now())
+
+  listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, detectedAt])
+}
+
+model JobListingMatch {
+  id String @id @default(cuid())
+
+  jobId     String
+  listingId String @unique
+
+  confidence Float
+  method     DeduplicationMethod
+  decision   DeduplicationDecision @default(SAME_JOB)
+
+  evidence          Json?
+  manuallyConfirmed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job     Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  listing JobListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model JobProfileMatch {
+  id String @id @default(cuid())
+
+  profileId String
+  jobId     String
+
+  score       Float?
+  eligibility EligibilityStatus @default(UNKNOWN)
+
+  matchedKeywords String[] @default([])
+  missingKeywords String[] @default([])
+  reason          Json?
+
+  matchedAt DateTime @default(now())
+
+  profile SearchProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  job     Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, jobId])
+  @@index([score])
+}
+
+model UserJobState {
+  id String @id @default(cuid())
+
+  userId String
+  jobId  String
+
+  disposition UserJobDisposition @default(NONE)
+
+  firstViewedAt DateTime?
+  lastViewedAt  DateTime?
+  savedAt       DateTime?
+  ignoredAt     DateTime?
+  archivedAt    DateTime?
+
+  customExpiresAt DateTime?
+  preferredCvVersionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  preferredCvVersion CvVersion? @relation(fields: [preferredCvVersionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, jobId])
+  @@index([preferredCvVersionId])
+}
+
+model Application {
+  id String @id @default(cuid())
+
+  userId          String
+  jobId           String
+  searchProfileId String?
+  sourceListingId String?
+  foundSourceId   String?
+  appliedSourceId String?
+  cvVersionId     String?
+
+  stage ApplicationStage @default(APPLIED)
+
+  appliedAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  whereAppliedUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  searchProfile SearchProfile? @relation(fields: [searchProfileId], references: [id], onDelete: SetNull)
+  sourceListing JobListing?    @relation(fields: [sourceListingId], references: [id], onDelete: SetNull)
+  foundSource   Source?         @relation("ApplicationFoundSource", fields: [foundSourceId], references: [id], onDelete: SetNull)
+  appliedSource Source?         @relation("ApplicationAppliedSource", fields: [appliedSourceId], references: [id], onDelete: SetNull)
+  cvVersion     CvVersion?      @relation(fields: [cvVersionId], references: [id], onDelete: SetNull)
+
+  events ApplicationEvent[]
+  notes  JobNote[]
+  coverLetters CoverLetter[]
+  contacts ApplicationContact[]
+  offer Offer?
+  followUps FollowUpSuggestion[]
+  interviewWorkspace InterviewWorkspace?
+  pack ApplicationPack?
+
+  @@index([userId, stage])
+  @@index([jobId])
+  @@index([foundSourceId])
+  @@index([appliedSourceId])
+  @@index([cvVersionId])
+}
+
+model ApplicationEvent {
+  id String @id @default(cuid())
+
+  applicationId String
+  type          ApplicationEventType
+  occurredAt    DateTime @default(now())
+  note          String?
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, occurredAt])
+}
+
+model JobNote {
+  id String @id @default(cuid())
+
+  userId        String
+  jobId         String
+  applicationId String?
+  note          String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job         Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, jobId])
+}
+
+model RiskReport {
+  id String @id @default(cuid())
+
+  userId    String
+  sourceId  String?
+  companyId String?
+  jobId     String?
+
+  level      RiskLevel
+  reasonType RiskReasonType
+  reason     String
+  evidenceUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source  Source?  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@index([companyId])
+  @@index([jobId])
+  @@index([level])
+}
+
+model JobStatusEvent {
+  id String @id @default(cuid())
+
+  jobId      String
+  type       JobStatusEventType
+  occurredAt DateTime @default(now())
+  metadata   Json?
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, occurredAt])
+}
+
+model EvidenceEntry {
+  id String @id @default(cuid())
+  userId String
+  type EvidenceType
+  title String
+  summary String
+  details String?
+  organization String?
+  role String?
+  startedAt DateTime?
+  endedAt DateTime?
+  skills String[] @default([])
+  tags String[] @default([])
+  metrics Json?
+  verified Boolean @default(true)
+  sourceLabel String?
+  sourceCvVersionId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+model JobSnapshot {
+  id String @id @default(cuid())
+  jobId String
+  applicationPackId String?
+  capturedAt DateTime @default(now())
+  reason String?
+  sourceUrl String?
+  contentHash String?
+  snapshot Json
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicationPack ApplicationPack? @relation(fields: [applicationPackId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, capturedAt])
+  @@index([applicationPackId])
+}
+model ApplicationPack {
+  id String @id @default(cuid())
+  userId String
+  applicationId String @unique
+  status ApplicationPackStatus @default(DRAFT)
+  cvVersionId String?
+  sourceUrl String?
+  answers Json?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  snapshots JobSnapshot[]
+
+  @@index([userId, status])
+}
+model CoverLetter {
+  id String @id @default(cuid())
+  userId String
+  applicationId String?
+  jobId String
+  profileId String?
+  title String
+  content String
+  status CoverLetterStatus @default(DRAFT)
+  requirementsCovered Json?
+  evidenceEntryIds String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId, jobId])
+  @@index([applicationId])
+}
+model InterviewWorkspace {
+  id String @id @default(cuid())
+  applicationId String @unique
+  scheduledAt DateTime?
+  meetingUrl String?
+  location String?
+  likelyAreas Json?
+  starExamples Json?
+  questionsToAsk Json?
+  prepNotes String?
+  questionsAsked Json?
+  outcomeNotes String?
+  followUpNotes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+model Contact {
+  id String @id @default(cuid())
+  userId String
+  name String
+  email String?
+  phone String?
+  organization String?
+  title String?
+  notes String?
+  nextFollowUpAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications ApplicationContact[]
+
+  @@index([userId, organization])
+  @@index([userId, email])
+}
+model ApplicationContact {
+  id String @id @default(cuid())
+  applicationId String
+  contactId String
+  relationship String?
+  createdAt DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, contactId])
+}
+model FollowUpSuggestion {
+  id String @id @default(cuid())
+  userId String
+  applicationId String
+  action FollowUpActionType
+  state FollowUpState @default(SUGGESTED)
+  dueAt DateTime?
+  reason String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, state, dueAt])
+  @@index([applicationId])
+}
+model Offer {
+  id String @id @default(cuid())
+  userId String
+  applicationId String @unique
+  status OfferStatus @default(RECEIVED)
+  salary Decimal? @db.Decimal(12, 2)
+  currency String?
+  bonusText String?
+  housingText String?
+  transportText String?
+  medicalText String?
+  visaText String?
+  schoolFeesText String?
+  leaveText String?
+  contractDurationText String?
+  remotePolicyText String?
+  startDate DateTime?
+  probationText String?
+  noticePeriodText String?
+  otherBenefits String?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+model SearchCampaign {
+  id String @id @default(cuid())
+  userId String
+  profileId String?
+  name String
+  status SearchCampaignStatus @default(ACTIVE)
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile SearchProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+}
+model JobShare {
+  id String @id @default(cuid())
+
+  userId String
+  jobIds String[]
+  recipients String[]
+  subject String
+  message String?
+  delivery JobShareDelivery
+  deliveryReference String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SmartNotification {
+  id String @id @default(cuid())
+  userId String
+  type SmartNotificationType
+  state SmartNotificationState @default(UNREAD)
+  title String
+  message String
+  targetType String?
+  targetId String?
+  actionUrl String?
+  fingerprint String
+  createdAt DateTime @default(now())
+  readAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId, state, createdAt])
+}
+model JobPriority {
+  id String @id @default(cuid())
+  userId String
+  jobId String
+  profileId String?
+  bucket PriorityBucket
+  score Float
+  reasons Json
+  calculatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  profile SearchProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([userId, bucket])
+  @@index([profileId, score])
+  @@index([jobId])
+}
+
+model SourceBatch {
+  id String @id @default(cuid())
+
+  userId      String
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items SourceBatchItem[]
+
+  @@index([userId])
+}
+
+model SourceBatchItem {
+  id String @id @default(cuid())
+
+  batchId  String
+  sourceId String
+  order    Int     @default(0)
+  enabled  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  batch  SourceBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  source Source      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, sourceId])
+  @@index([sourceId])
+}
+
+
+model Cv {
+  id String @id @default(cuid())
+
+  userId String
+  name   String
+  description String?
+
+  isMaster Boolean @default(false)
+  archived Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions CvVersion[]
+  profileLinks CvProfileLink[]
+
+  @@index([userId, archived])
+}
+
+model CvVersion {
+  id String @id @default(cuid())
+
+  cvId String
+  versionNumber Int
+  label String?
+  sourceType CvSourceType
+
+  originalFileName String?
+  mimeType String?
+  originalFileData Bytes?
+
+  plainText String
+  structuredData Json?
+  changeSummary String?
+
+  createdAt DateTime @default(now())
+
+  cv Cv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  matches JobCvMatch[]
+  baseTailoringSessions CvTailoringSession[] @relation("TailoringBaseVersion")
+  createdFromTailoring CvTailoringSession? @relation("TailoringCreatedVersion")
+  applications Application[]
+  preferredByJobStates UserJobState[]
+
+  @@unique([cvId, versionNumber])
+  @@index([cvId, createdAt])
+}
+
+model CvProfileLink {
+  id String @id @default(cuid())
+
+  cvId String
+  profileId String
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cv Cv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  profile SearchProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([cvId, profileId])
+  @@index([profileId, isDefault])
+}
+
+model JobRequirement {
+  id String @id @default(cuid())
+
+  jobId String
+  kind CvRequirementKind
+  text String
+  normalizedKey String?
+  priority Int @default(50)
+  source String @default("JOB_DESCRIPTION")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  matchItems JobCvMatchItem[]
+
+  @@index([jobId, kind])
+  @@index([normalizedKey])
+}
+
+model JobCvMatch {
+  id String @id @default(cuid())
+
+  userId String
+  jobId String
+  cvVersionId String
+
+  score Int
+  summary String?
+
+  evidencedCount Int @default(0)
+  partialCount Int @default(0)
+  notEvidencedCount Int @default(0)
+  needsConfirmationCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cvVersion CvVersion @relation(fields: [cvVersionId], references: [id], onDelete: Cascade)
+  items JobCvMatchItem[]
+  tailoringSessions CvTailoringSession[]
+
+  @@unique([userId, jobId, cvVersionId])
+  @@index([jobId, updatedAt])
+  @@index([cvVersionId])
+}
+
+model JobCvMatchItem {
+  id String @id @default(cuid())
+
+  matchId String
+  requirementId String?
+  requirementText String
+  status CvMatchStatus
+  evidence String?
+  suggestion String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match JobCvMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  requirement JobRequirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+
+  @@index([matchId, status])
+}
+
+model CvTailoringSession {
+  id String @id @default(cuid())
+
+  userId String
+  jobId String
+  baseCvVersionId String
+  matchId String?
+  createdVersionId String? @unique
+
+  status CvTailoringStatus @default(DRAFT)
+  workingText String
+  workingData Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  baseCvVersion CvVersion @relation("TailoringBaseVersion", fields: [baseCvVersionId], references: [id], onDelete: Cascade)
+  match JobCvMatch? @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  createdVersion CvVersion? @relation("TailoringCreatedVersion", fields: [createdVersionId], references: [id], onDelete: SetNull)
+  suggestions CvTailoringSuggestion[]
+
+  @@index([userId, updatedAt])
+  @@index([jobId])
+}
+
+model CvTailoringSuggestion {
+  id String @id @default(cuid())
+
+  sessionId String
+  requirementText String?
+  section String?
+  beforeText String?
+  afterText String?
+  reason String
+  requiresConfirmation Boolean @default(false)
+  confirmedFact String?
+  status CvSuggestionStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session CvTailoringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, status])
+}
+
+model AiUsage {
+  id String @id @default(cuid())
+
+  userId    String?
+  profileId String?
+  jobId     String?
+
+  task     AiTaskType
+  provider String
+  model    String
+
+  inputTokens  Int?
+  outputTokens Int?
+  estimatedCostUsd Decimal? @db.Decimal(12, 6)
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  user    User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profile SearchProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  job     Job?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([task, createdAt])
+  @@index([userId, createdAt])
+}
+

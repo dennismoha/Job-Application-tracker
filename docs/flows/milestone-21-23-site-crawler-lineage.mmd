@@ -1,0 +1,32 @@
+flowchart TD
+    S[Job Site / Source] --> W[Site Workspace]
+    W --> J[Jobs discovered]
+    W --> A[Applications]
+    W --> C[Crawler Configurations]
+    W --> H[Health]
+
+    C --> C1[Math / UAE crawler]
+    C --> C2[Science / Dubai crawler]
+    C --> C3[General careers crawler]
+
+    C1 --> R1[Run]
+    C2 --> R2[Run]
+    C3 --> R3[Run]
+
+    R1 --> L1[Job Listings]
+    R2 --> L2[Job Listings]
+    R3 --> L3[Job Listings]
+
+    L1 --> CJ[Canonical Jobs]
+    L2 --> CJ
+    L3 --> CJ
+
+    CJ --> APP[Application]
+    APP --> DS[Discovery sourceListingId]
+    APP --> AS[Actual appliedSourceId]
+
+    J --> E[Edit manual job]
+    J --> AR[Archive]
+    E --> D{Application history?}
+    D -->|No| DEL[Permanent delete allowed]
+    D -->|Yes| AR

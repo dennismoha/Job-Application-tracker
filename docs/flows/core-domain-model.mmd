@@ -1,0 +1,28 @@
+erDiagram
+    USER ||--o{ SEARCH_PROFILE : owns
+    USER ||--o{ USER_JOB_STATE : interacts_with
+    USER ||--o{ APPLICATION : submits
+    USER ||--o{ RISK_REPORT : creates
+
+    SEARCH_PROFILE ||--o{ SOURCE_SUBSCRIPTION : subscribes
+    SEARCH_PROFILE ||--o{ JOB_PROFILE_MATCH : matches
+
+    COMPANY ||--o{ SOURCE : owns
+    COMPANY ||--o{ JOB : hires
+
+    SOURCE ||--o| SOURCE_SCHEDULE : scheduled_by
+    SOURCE ||--o{ SOURCE_AUDIT : audited_by
+    SOURCE ||--o{ ACQUISITION_RUN : collected_by
+    SOURCE ||--o{ JOB_INGESTION : receives
+    SOURCE ||--o{ JOB_LISTING : publishes
+
+    JOB ||--o{ JOB_LISTING_MATCH : resolves
+    JOB_LISTING ||--o{ JOB_LISTING_MATCH : matched_to
+
+    JOB ||--o{ USER_JOB_STATE : state_for
+    JOB ||--o{ APPLICATION : applied_to
+    JOB ||--o{ JOB_NOTE : has
+    JOB ||--o{ JOB_PROFILE_MATCH : scored_for
+
+    APPLICATION ||--o{ APPLICATION_EVENT : history
+    APPLICATION ||--o{ JOB_NOTE : notes

@@ -1,0 +1,8 @@
+node_modules
+dist
+docs/viewer/dist
+research/source-audit/results
+research/source-audit/reports
+
+web/node_modules
+web/dist

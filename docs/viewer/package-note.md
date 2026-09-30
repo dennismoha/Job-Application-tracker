@@ -1,0 +1,1 @@
+The Mermaid viewer is part of the root Node project. Run `npm run docs:dev` from the repository root after installing dependencies.

@@ -1,0 +1,20 @@
+flowchart TD
+    A[User finds new careers/job URL] --> B[POST /api/sources/analyze]
+    B --> C[Validate public HTTP/HTTPS URL]
+    C --> D[Read robots.txt when available]
+    D --> E[Fetch public page once]
+    E --> F[Detect ATS / JSON-LD / RSS]
+    E --> G[Detect JS-heavy page]
+    E --> H[Detect login / challenge signals]
+    E --> I[Detect job alerts / apply links]
+    F --> J[Recommend acquisition mode]
+    G --> J
+    H --> J
+    I --> J
+    J --> K{User saves source?}
+    K -- Yes --> L[Create Source]
+    L --> M[Create SourceSchedule]
+    L --> N[Create SourceHealth]
+    L --> O[Persist SourceAudit]
+    K -- No --> P[Discard transient analysis]
+    O --> Q[Future re-audits append history]

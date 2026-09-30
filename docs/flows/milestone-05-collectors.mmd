@@ -1,0 +1,20 @@
+flowchart TD
+  A[AcquisitionRun RUNNING] --> B{Source acquisition mode}
+  B -->|AUTO / MANUAL_BATCH| C[SourceCollectorExecutor]
+  B -->|EMAIL / RESTRICTED| Z[No direct crawl]
+  C --> D[Read latest SourceAudit]
+  D --> E{robots disallow or challenge?}
+  E -->|Yes| Z
+  E -->|No| F[Resolve collector]
+  F --> G{Known route}
+  G -->|Greenhouse| H[Public Greenhouse board endpoint]
+  G -->|Lever| I[Public Lever postings endpoint]
+  G -->|RSS| J[Feed collector]
+  G -->|JSON-LD| K[JobPosting collector]
+  G -->|Fallback| L[Conservative static HTML collector]
+  H --> M[RawJobListing array]
+  I --> M
+  J --> M
+  K --> M
+  L --> M
+  M --> N[Milestone 6 ingestion pipeline]

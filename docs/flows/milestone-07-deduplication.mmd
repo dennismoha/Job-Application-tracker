@@ -1,0 +1,24 @@
+flowchart TD
+  A[Normalized candidate] --> B[Build source listing key]
+  B --> B1{Private manual entry?}
+  B1 -->|Yes| B2[Add user scope to listing key]
+  B1 -->|No| C{Same source listing exists?}
+  B2 --> C
+  C -->|Yes| D[Update lastSeen / retain revision when content changes]
+  C -->|No| E[Resolve canonical company]
+  E --> F[Load recent candidate jobs in the same visibility scope]
+  F --> G[Score company/title/location/description/date/URL]
+  G --> H{Hard conflict?}
+  H -->|Yes| J[Create new canonical Job]
+  H -->|No| I{Exact signal or score >= conservative threshold?}
+  I -->|Yes| K[Attach listing to existing Job]
+  I -->|No| J
+  K --> L[Store JobListingMatch evidence]
+  J --> M[Create JobListing]
+  M --> N[Store self-match evidence for the new canonical Job]
+  D --> O[Canonical job visible once]
+  L --> O
+  N --> O
+  O --> P{Manual regroup requested?}
+  P -->|Yes| Q[Require user-managed listing and matching visibility]
+  Q --> R[Move listing and record MANUAL evidence]

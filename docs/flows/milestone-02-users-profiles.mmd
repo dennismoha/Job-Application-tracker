@@ -1,0 +1,15 @@
+flowchart TD
+    A[Register / Login] --> B[Secure User Session]
+    B --> C[Authenticated User]
+    C --> D[Create Search Profile]
+    D --> E[Choose Categories]
+    D --> F[Keywords / Exclusions]
+    D --> G[Countries / Locations]
+    D --> H[Salary / Freshness Preferences]
+    E --> I[Search Profile]
+    F --> I
+    G --> I
+    H --> I
+    I --> J[Future Source Subscriptions]
+    I --> K[Future Job Matching]
+    I --> L[Future Application Attribution]

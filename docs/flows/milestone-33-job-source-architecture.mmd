@@ -1,0 +1,32 @@
+flowchart TD
+    JS[Job Source<br/>LinkedIn / Indeed / Careers / ATS / Newsletter]
+    ST[Source Type<br/>What it is]
+    CC[Collection Capability<br/>How it can be monitored]
+    ORG[Organization<br/>Employer / school / company]
+    JL[Job Listing<br/>One published occurrence]
+    J[Canonical Job]
+    APP[Application]
+    AM[Acquisition Method<br/>Crawler / Universal Search / Browser / Email / Manual]
+    CF[Crawler Configuration]
+    RUN[Crawl Run]
+    FOUND[Found via]
+    APPLIED[Applied via]
+    UNK[Protected Unclassified Source]
+
+    JS --> ST
+    JS --> CC
+    JS <-->|many-to-many| ORG
+    JS --> JL
+    ORG --> J
+    JL --> J
+    AM --> JL
+    J --> APP
+    JS --> FOUND --> APP
+    JS --> APPLIED --> APP
+    JS --> CF --> RUN --> JL
+    UNK --> JL
+
+    US[Universal Search] -->|Acquisition Method| AM
+    BC[Browser Companion] -->|Acquisition Method| AM
+    EM[Email] -->|Acquisition Method| AM
+    MAN[Manual] -->|Acquisition Method| AM

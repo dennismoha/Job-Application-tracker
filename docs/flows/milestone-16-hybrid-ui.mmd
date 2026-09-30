@@ -1,0 +1,33 @@
+flowchart TD
+    H[Home\nWhat needs attention?]
+    O[Opportunities\nReview job inbox]
+    A[Applications\nTrack post-application journey]
+    D[Discover\nBring in more opportunities]
+
+    H --> O
+    H --> A
+    H --> D
+
+    O --> R{Decision}
+    R -->|Save| O
+    R -->|Ignore| O
+    R -->|Apply| A
+
+    D --> W[Web search]
+    D --> E[Email alerts]
+    D --> M[Manual batches]
+    D --> B[Browser Companion]
+
+    W --> I[Shared ingestion pipeline]
+    E --> I
+    M --> I
+    B --> I
+    I --> N[Normalize]
+    N --> X[Deduplicate]
+    X --> O
+
+    S[Sources\nMonitoring + health] --> D
+    P[Preferences\nSearch profiles] --> O
+    P --> D
+    A --> Z[Insights\nWhat is working?]
+    S --> Z

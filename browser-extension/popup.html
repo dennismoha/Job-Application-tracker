@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <title>Job Intelligence</title>
+</head>
+<body>
+<main class="popup">
+  <header><div class="brand">J</div><div><strong>Job Intelligence</strong><span>Browser companion</span></div></header>
+
+  <section id="loading" class="state">Reading and checking this page…</section>
+
+  <section id="content" hidden>
+    <div class="detection-row"><span id="detection" class="detection">Checking page</span><span id="confidence"></span></div>
+    <span class="label">Current page</span>
+    <h1 id="title"></h1>
+    <p id="job-meta"></p>
+    <p id="url" class="url"></p>
+    <div id="existing" class="existing" hidden></div>
+    <div id="not-job" class="warning" hidden>This page does not clearly look like a vacancy. You can still save selected text manually, but CV comparison is only enabled for detected job pages.</div>
+
+    <section id="source-section" class="cv-section">
+      <div class="section-heading"><div><span class="label">Job Source</span><strong>Where is this vacancy published?</strong></div></div>
+      <p id="source-detection" class="message"></p>
+      <label>Job Source
+        <select id="source-select"></select>
+      </label>
+      <button id="toggle-source-form" class="text-button">+ Add Job Source</button>
+      <div id="source-form" hidden>
+        <label>Name<input id="source-name" type="text" placeholder="e.g. ABC School Careers"></label>
+        <label>Source type
+          <select id="source-type">
+            <option value="JOB_BOARD">Job Board</option>
+            <option value="COMPANY_CAREERS">Company Careers</option>
+            <option value="ORGANIZATION_WEBSITE">Organization Website</option>
+            <option value="ATS">ATS</option>
+            <option value="RECRUITER">Recruiter</option>
+            <option value="NEWSLETTER">Newsletter</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </label>
+        <button id="create-source" class="wide">Create and use this Job Source</button>
+      </div>
+      <p class="message">Acquisition method: Browser Companion. This is separate from the publishing Job Source.</p>
+    </section>
+
+    <section id="cv-section" class="cv-section" hidden>
+      <div class="section-heading"><div><span class="label">CV check</span><strong>Compare before you apply</strong></div></div>
+      <label>CV
+        <select id="cv-select"></select>
+      </label>
+      <button id="compare" class="wide">Compare CV with this job</button>
+      <div id="match" class="match" hidden>
+        <div class="match-score"><strong id="match-score"></strong><span>requirements evidenced</span></div>
+        <div class="match-grid"><span><b id="match-evidenced"></b>Evidenced</span><span><b id="match-partial"></b>Partial</span><span><b id="match-missing"></b>Not evidenced</span><span><b id="match-confirm"></b>Confirm</span></div>
+        <div id="match-gaps" class="match-gaps"></div>
+      </div>
+      <div class="cv-actions">
+        <button id="save-with-cv">Save job + CV</button>
+        <button id="improve" class="primary">Improve CV</button>
+      </div>
+      <button id="open-cv-library" class="text-button">Open CV library</button>
+    </section>
+
+    <label>Optional note<textarea id="note" placeholder="Recruiter name, salary note, next step…"></textarea></label>
+    <div class="actions"><button id="save">Save job</button><button id="applied" class="primary">Save + applied</button></div>
+    <p id="message" class="message"></p>
+  </section>
+
+  <section id="setup" hidden class="state">
+    <strong>Connect the extension first.</strong>
+    <p>Open extension settings and add the API address, web app address and companion token created in Job Intelligence.</p>
+    <button id="open-options">Open settings</button>
+  </section>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>

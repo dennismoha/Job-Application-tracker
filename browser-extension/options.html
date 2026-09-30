@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <title>Job Intelligence Companion Settings</title>
+</head>
+<body>
+  <main class="options">
+    <header><div class="brand">J</div><div><strong>Job Intelligence Companion</strong><span>Connection settings</span></div></header>
+    <section class="settings">
+      <label>API address<input id="api" placeholder="http://localhost:4000"></label>
+      <label>Web app address<input id="web-app" placeholder="http://localhost:5173"></label>
+      <label>Companion token<input id="token" type="password" placeholder="jic_…"></label>
+      <button id="save-settings" class="primary">Save connection</button>
+      <p id="status" class="message"></p>
+      <small>The companion token is stored only in browser extension storage. Revoke it from Job Intelligence if this browser is lost or shared.</small>
+    </section>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

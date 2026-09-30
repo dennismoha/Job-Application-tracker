@@ -1,0 +1,44 @@
+flowchart TD
+    A[Existing v1.4 product logic] --> C[UI integration layer]
+    B[Uploaded UI visual system] --> C
+
+    C --> D[Dashboard]
+    C --> E[Jobs]
+    C --> F[Job Sites]
+    C --> G[Crawling]
+    C --> H[Universal Search]
+    C --> I[Applications]
+    C --> J[CVs]
+    C --> K[Extension]
+    C --> L[Analytics]
+    C --> M[Settings]
+
+    E --> E1[Canonical jobs]
+    E --> E2[Source provenance]
+    E --> E3[CV comparison]
+    E --> E4[Save / Apply / Risk]
+
+    F --> F1[Source registry]
+    F --> F2[Health]
+    F --> F3[Subscriptions]
+
+    G --> G1[Runs]
+    G --> G2[Failures]
+    G --> G3[Operational history]
+
+    J --> J1[Original CV kept immutable]
+    J --> J2[Version history]
+    J --> J3[Layout guard]
+    J --> J4[Tailored version]
+
+    K --> K1[Detect current page]
+    K --> K2[Extract vacancy]
+    K --> K3[Compare CV]
+    K --> K4[Save or apply]
+
+    H --> N[Existing ingestion pipeline]
+    K --> N
+    F --> N
+    N --> O[Normalize]
+    O --> P[Deduplicate]
+    P --> E

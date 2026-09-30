@@ -1,0 +1,38 @@
+flowchart LR
+  subgraph UI[Uploaded UI — live presentation]
+    D[Dashboard]
+    J[Jobs]
+    S[Job Sites]
+    C[Crawling]
+    U[Universal Search]
+    A[Applications]
+    V[CVs]
+    E[Extension]
+    R[Analytics]
+    P[Settings]
+  end
+
+  subgraph Core[Existing functional core]
+    ING[Ingestion / normalization]
+    DED[Deduplication]
+    JOB[Canonical jobs + listings]
+    SRC[Sources + schedules + health]
+    APP[Applications + events]
+    CV[CV library + versions + tailoring]
+    REP[Reports]
+    PRO[Search profiles]
+  end
+
+  U --> ING --> DED --> JOB
+  J <--> JOB
+  S <--> SRC
+  C <--> SRC
+  A <--> APP
+  V <--> CV
+  E --> ING
+  E <--> CV
+  R <--> REP
+  P <--> PRO
+  D --> JOB
+  D --> APP
+  D --> SRC

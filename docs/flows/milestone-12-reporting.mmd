@@ -1,0 +1,21 @@
+flowchart TD
+  A[Operational data] --> B[Job / JobListing]
+  A --> C[Application / ApplicationEvent]
+  A --> D[RiskReport]
+  A --> E[AcquisitionRun / SourceHealth]
+  B --> F[Report service]
+  C --> F
+  D --> F
+  E --> F
+  F --> G[Overview]
+  F --> H[Source effectiveness]
+  F --> I[Repeated jobs / duplicates / freshness]
+  F --> J[Application funnel / response time]
+  F --> K[Risk report]
+  F --> L[System health]
+  G --> M[React reports dashboard]
+  H --> M
+  I --> M
+  J --> M
+  K --> M
+  L --> M

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: job_intelligence_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d job_intelligence_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/job_intelligence_test?schema=public
+      CORS_ORIGIN: http://localhost:5173
+      NODE_ENV: test
+      N8N_INGESTION_SECRET: ci-test-secret-at-least-sixteen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm --prefix web install --no-audit --no-fund
+      - run: npm run db:generate
+      - run: npx prisma db push --skip-generate
+      - run: npm run project:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run docs:build
+      - run: npm run web:typecheck
+      - run: npm run web:lint
+      - run: npm run web:build

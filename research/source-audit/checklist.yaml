@@ -1,0 +1,52 @@
+version: 0.1
+purpose: "Reconnaissance checklist for UAE teaching-job sources"
+principles:
+  - "Do not bypass authentication, CAPTCHA, rate limits, or anti-bot controls."
+  - "Prefer APIs, feeds, ATS pages, JSON-LD, email alerts, and manual review over brittle scraping."
+  - "Use a conservative request rate and stop automated checks when a source challenges access."
+objective_checks:
+  connectivity:
+    - http_status
+    - final_url
+    - redirect_count
+    - response_time_ms
+    - content_type
+  structure:
+    - title
+    - visible_text_chars
+    - script_count
+    - json_ld_count
+    - jobposting_json_ld_count
+    - rss_or_atom_links
+  source_detection:
+    - ats_provider
+    - known_hosted_platform
+    - javascript_heavy_hint
+  access_controls:
+    - login_wall_hint
+    - captcha_or_challenge_hint
+    - rate_limit_hint
+    - robots_txt_present
+    - robots_disallow_root_hint
+  job_features:
+    - job_terms_present
+    - subject_terms_present
+    - application_link_hint
+    - email_alert_hint
+    - recruiter_email_hint
+interpretive_checks:
+  - remote_or_overseas_candidate_relevance
+  - geographic_restrictions
+  - canonical_job_source
+  - best_acquisition_mode
+  - freshness_quality
+  - duplicate_risk
+  - notes
+acquisition_modes:
+  AUTO: "Stable public machine-readable or public HTML source suitable for scheduled checks."
+  EMAIL: "Prefer job alerts, recruiter mail, or direct CV email."
+  ACCOUNT: "Useful source but listings/search depend on a candidate account."
+  MANUAL_BATCH: "User-triggered checks only; avoid scheduled recurring traffic."
+  SEARCH_ONLY: "Use search/discovery and then verify on the canonical employer source."
+  RESTRICTED: "Automated access is challenged or unsuitable; do not automate."
+  DISABLED: "Not currently useful."

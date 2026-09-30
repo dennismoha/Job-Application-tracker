@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Job Intelligence Companion",
+  "version": "1.2.0",
+  "description": "Capture job pages, compare CVs, prepare truthful applications, and track applications in Job Intelligence.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "http://localhost:4000/*"
+  ],
+  "action": {
+    "default_title": "Save to Job Intelligence",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  }
+}

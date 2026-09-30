@@ -1,0 +1,19 @@
+flowchart TD
+  A[Reverse proxy / TLS] --> B[React web]
+  A --> C[Node API]
+  C --> D[PostgreSQL]
+  C --> E[Health ready/live]
+  C --> F[Request ID / logs / rate limit]
+
+  G[Dedicated worker] --> D
+  G --> H[Scheduler ticks]
+  H --> I[AcquisitionRun queue]
+  I --> J[Collectors / search]
+  J --> C
+
+  K[n8n] --> C
+  L[Search provider] --> J
+  M[Optional AI provider] --> C
+
+  N[CI] --> O[Typecheck / lint / test / build]
+  O --> P[Deploy]

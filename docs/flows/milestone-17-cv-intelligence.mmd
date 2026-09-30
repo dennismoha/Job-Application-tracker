@@ -1,0 +1,45 @@
+flowchart TD
+    A[Job discovered or open in browser] --> B{Job already in system?}
+    B -->|No| C[Capture / ingest job]
+    B -->|Yes| D[Open canonical job]
+    C --> D
+
+    D --> E[Choose search profile]
+    E --> F[Choose CV version]
+    F --> G[Extract / load job requirements]
+    G --> H[Compare CV evidence]
+
+    H --> I[Evidenced]
+    H --> J[Partially evidenced]
+    H --> K[Not evidenced]
+    H --> L[Needs confirmation]
+
+    I --> M{Next action}
+    J --> M
+    K --> M
+    L --> M
+
+    M -->|CV is ready| N[Use selected CV]
+    M -->|Prepare later| O[Save job + preferred CV version]
+    M -->|Improve now| P[Create tailoring session]
+
+    P --> Q[Review suggestions]
+    Q --> R{Suggestion adds a new fact?}
+    R -->|No| S[Accept / edit / ignore rewrite]
+    R -->|Yes| T[Ask user to confirm and provide factual evidence]
+    T --> U{Confirmed?}
+    U -->|No| V[Do not add fact]
+    U -->|Yes| S
+
+    S --> W[Edit working draft]
+    V --> W
+    W --> X[Preview]
+    X --> Y[Save as new immutable CV version]
+    Y --> Z[Download PDF / DOCX]
+    Y --> AA[Apply]
+    N --> AA
+    O --> AB[Resume later with same CV version]
+    AB --> P
+
+    AA --> AC[Application stores exact CvVersion]
+    AC --> AD[Application timeline / follow-up]

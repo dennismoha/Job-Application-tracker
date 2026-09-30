@@ -1,0 +1,23 @@
+flowchart TD
+    A[User browses a job page] --> B[Click Browser Companion]
+    B --> C[Read active tab only]
+    C --> D[URL + page title]
+    C --> E[JobPosting JSON-LD]
+    C --> F[Selected / visible text]
+    D --> G[POST browser companion capture]
+    E --> G
+    F --> G
+    G --> H[Authenticate revocable companion token]
+    H --> I[Raw Job Listing]
+    I --> J[Normal ingestion pipeline]
+    J --> K[Normalize]
+    K --> L[Validate]
+    L --> M[Deduplicate]
+    M --> N{Known job?}
+    N -->|Yes| O[Attach / update listing]
+    N -->|No| P[Create canonical job]
+    O --> Q{User action}
+    P --> Q
+    Q -->|Save| R[Save to job inbox]
+    Q -->|Applied| S[Create application]
+    S --> T[ApplicationEvent: APPLIED]

@@ -1,0 +1,15 @@
+flowchart TD
+  A[Optional AI configured?] -->|No| B[Deterministic platform continues]
+  A -->|Yes| C[AI client]
+  C --> D[Job + SearchProfile]
+  D --> E[Match / eligibility / evidence]
+  E --> F[JobProfileMatch]
+  C --> G[Stored unstructured email]
+  G --> H[Extract distinct vacancies]
+  H --> I[Normal JobIngestion pipeline]
+  C --> J[Borderline dedup 70-89]
+  J --> K{Same / Different / Uncertain}
+  K --> L[Dedup decision]
+  C --> M[Source audit history]
+  M --> N[Non-bypass acquisition recommendation]
+  C --> O[AiUsage token record]

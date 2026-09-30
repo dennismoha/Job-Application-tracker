@@ -1,0 +1,21 @@
+flowchart TD
+  A[Acquisition need] --> B{Mode}
+  B -->|EMAIL| C[Site alert email]
+  C --> D[n8n jobs mailbox listener]
+  D --> E[Structured jobs + message metadata]
+  E --> F[Secured email webhook]
+  F --> G[EmailIngestion]
+  G --> H[JobIngestion]
+  H --> I[Normalize / validate / deduplicate]
+  I --> J[Recommended Recent / Old / Mixed label]
+
+  B -->|MANUAL_BATCH| K[User runs source batch]
+  K --> L[Queue runnable sources sequentially]
+  L --> M[Existing source collectors]
+  M --> H
+
+  B -->|SEARCH_ONLY| N[Search provider]
+  N --> O[Job-like result URLs]
+  O --> H
+  O --> P[Unknown domains]
+  P --> Q[Offer Add Source workflow]

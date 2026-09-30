@@ -1,0 +1,43 @@
+flowchart TD
+    J[Canonical Job] --> A[Application]
+    A --> P[Application Pack]
+    J --> S[Job Snapshot / Listing Revisions]
+    S --> P
+    CV[Exact CV Version] --> P
+    ANS[Application Answers] --> P
+
+    E[Verified Evidence Bank] --> CL[Truthful Cover Letter]
+    E --> AF[Application Form Assistant]
+    E --> I[Interview Workspace]
+    J --> CL
+    J --> AF
+    J --> I
+    CL --> P
+
+    A --> FU[Follow-up Engine]
+    A --> C[Recruiter / Contact CRM]
+    A --> I
+    A --> O[Offer Record]
+
+    M[Job Profile Matches] --> SG[Skill-gap Intelligence]
+    E --> SG
+    J --> MI[Market Intelligence]
+    A --> SA[Strategy Analytics]
+    CV --> SA
+    SRC[Actual Application Source] --> SA
+
+    M --> PQ[Explainable Priority Queue]
+    J --> PQ
+    FU --> N[Smart Notifications]
+    I --> N
+    O --> N
+    S --> N
+
+    CAM[Search Campaign] --> TL[Search Timeline]
+    J --> TL
+    A --> TL
+
+    P --> L[Explicit Apply Launch]
+    L --> D[Download selected CV]
+    D --> X[Open external application page]
+    X -->|User remains in control| A

@@ -1,0 +1,13 @@
+flowchart TD
+  A[User reviews source/company/job] --> B{Trust concern?}
+  B -->|No concern| C[Optional GREEN note]
+  B -->|Concern| D[Choose YELLOW / ORANGE / RED]
+  C --> E[Write RiskReport]
+  D --> F[Reason type + human reason + optional evidence]
+  F --> E
+  E --> G[User-specific trust history]
+  G --> H[Job/source UI warnings]
+  G --> I[Risk analytics]
+  J[System/admin evidence] --> K[systemRiskLevel]
+  K --> H
+  E -. does not mutate .-> K

@@ -1,0 +1,39 @@
+flowchart TD
+    A[User SearchProfile] --> B[SourceSubscription]
+    B --> C[Recalculate shared SourceSchedule]
+    C --> D[Minimum preferred interval across enabled profiles]
+
+    E[Scheduler Tick] --> F[Recover stale RUNNING worker locks]
+    F --> G[Load due SourceSchedule rows]
+    D --> G
+
+    G --> H{Enabled, active and not paused?}
+    H -- No --> Z[Ignore]
+    H -- Yes --> I[Atomically advance nextRunAt]
+    I --> J{Active run already exists?}
+    J -- Yes --> Z
+    J -- No --> K[Create QUEUED AcquisitionRun]
+
+    K --> L[Worker claims run]
+    L --> M[RUNNING + worker lock]
+    M --> N[Acquisition Dispatcher]
+
+    N --> O{Mode / executor result}
+    O --> P[COMPLETED]
+    O --> Q[PARTIAL]
+    O --> R[FAILED]
+    O --> S[RATE_LIMITED]
+    O --> T[CHALLENGED]
+    O --> U[SKIPPED until Milestone 5 collector exists]
+
+    P --> V[Update SourceHealth]
+    Q --> V
+    R --> V
+    S --> V
+    T --> V
+
+    V --> W{Repeated failure or challenge?}
+    W -- Yes --> X[Open circuit + pausedUntil]
+    W -- No --> Y[Keep source scheduled]
+    X --> AA[Cooldown or source-owner resume]
+    AA --> Y
