@@ -1,0 +1,1179 @@
+{
+  "schemaVersion": 2,
+  "project": {
+    "name": "Job Intelligence Platform",
+    "shortName": "JobIntel",
+    "description": "Personal career intelligence platform for discovering, normalizing, evaluating, tracking and analyzing jobs.",
+    "github": {
+      "projectTitle": "Job Intelligence Platform Roadmap"
+    }
+  },
+  "fields": {
+    "Status": [
+      "Backlog",
+      "Ready",
+      "In Progress",
+      "Review",
+      "Done"      
+    ],
+    "Area": [
+      "Jobs",
+      "Job Sources",
+      "Discovery",
+      "Crawling",
+      "Applications",
+      "CV Intelligence",
+      "Browser Companion",
+      "Analytics",
+      "Platform",
+      "DevOps",
+      "Security",
+      "UX"
+    ],
+    "Type": [
+      "Feature",
+      "Bug",
+      "Architecture",
+      "Engineering",
+      "Infrastructure",
+      "Documentation"
+    ],
+    "Priority": [
+      "Critical",
+      "High",
+      "Medium",
+      "Low"
+    ],
+    "Layer": [
+      "Frontend",
+      "Backend",
+      "Database",
+      "Extension",
+      "Worker",
+      "DevOps",
+      "Cross-cutting"
+    ],
+    "Effort": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ]
+  },
+  "items": [
+    {
+      "id": "JI-001",
+      "milestone": "M01",
+      "epic": "Foundation & Domain Model",
+      "title": "Canonical Job / Job Listing separation",
+      "description": "Model a canonical Job independently from the individual listings that publish or distribute it.",
+      "acceptance": [
+        "A Job can have multiple Job Listings.",
+        "Listing provenance remains attached to the listing.",
+        "Canonical job data is not duplicated per source."
+      ],
+      "status": "Done",
+      "area": "Jobs",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-002",
+      "milestone": "M01",
+      "epic": "Foundation & Domain Model",
+      "title": "Define Job Source as the publishing entity",
+      "description": "Use Job Source as the stable product term for LinkedIn, Indeed, company careers, newsletters, and similar channels.",
+      "acceptance": [
+        "Source type is separate from collection capability.",
+        "Source identity supports analytics."
+      ],
+      "status": "Done",
+      "area": "Job Sources",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-003",
+      "milestone": "M01",
+      "epic": "Foundation & Domain Model",
+      "title": "Separate Acquisition Method from Job Source",
+      "description": "Record how JobIntel discovered a listing independently from where it was published.",
+      "acceptance": [
+        "Crawler, Universal Search, Browser Companion, Email, and Manual are represented."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-004",
+      "milestone": "M01",
+      "epic": "Foundation & Domain Model",
+      "title": "Preserve Found via and Applied via",
+      "description": "Applications record discovery channel separately from the channel used to submit the application.",
+      "acceptance": [
+        "Found via is preserved.",
+        "Applied via is preserved.",
+        "Source analytics do not conflate them."
+      ],
+      "status": "Done",
+      "area": "Applications",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-005",
+      "milestone": "M01",
+      "epic": "Foundation & Domain Model",
+      "title": "Protected Unclassified Source",
+      "description": "Use a stable protected source when publishing provenance is initially unknown.",
+      "acceptance": [
+        "Unknown discoveries have a stable source.",
+        "Listings can later be reclassified."
+      ],
+      "status": "Done",
+      "area": "Job Sources",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Database",
+      "effort": "S",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-006",
+      "milestone": "M01",
+      "epic": "Foundation & Domain Model",
+      "title": "Organization separated from Job Source",
+      "description": "Organizations such as companies and schools are modeled independently from publishing channels.",
+      "acceptance": [
+        "Organizations exist independently.",
+        "Organization and Job Source support many-to-many relationships."
+      ],
+      "status": "Done",
+      "area": "Jobs",
+      "type": "Architecture",
+      "priority": "High",
+      "layer": "Database",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-010",
+      "milestone": "M02",
+      "epic": "Job Source Management",
+      "title": "Create, edit and maintain Job Sources",
+      "description": "Maintain source metadata with normalized domain identity.",
+      "acceptance": [
+        "Duplicate normalized domains are prevented.",
+        "Source metadata is editable."
+      ],
+      "status": "Done",
+      "area": "Job Sources",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Backend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-011",
+      "milestone": "M02",
+      "epic": "Job Source Management",
+      "title": "Safe Job Source URL verification",
+      "description": "Verify URLs with redirects, timeouts, HTTP status handling, and SSRF protections.",
+      "acceptance": [
+        "404/410 is treated as nonexistent.",
+        "401/403/429 is reachable but restricted.",
+        "Private/internal targets are blocked.",
+        "Redirects are bounded."
+      ],
+      "status": "Done",
+      "area": "Security",
+      "type": "Security",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-012",
+      "milestone": "M02",
+      "epic": "Job Source Management",
+      "title": "Collection capability classification",
+      "description": "Represent crawlable, restricted, manual, search, email and related collection capabilities.",
+      "acceptance": [
+        "Capability is visible per source.",
+        "Restricted sources can use alternative collection methods."
+      ],
+      "status": "Done",
+      "area": "Job Sources",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Database",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-013",
+      "milestone": "M02",
+      "epic": "Job Source Management",
+      "title": "Source lifecycle and risk states",
+      "description": "Support source edit/delete/archive behavior and risk classification.",
+      "acceptance": [
+        "Lifecycle is auditable.",
+        "Risk/scam sources are identifiable."
+      ],
+      "status": "Done",
+      "area": "Job Sources",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-020",
+      "milestone": "M03",
+      "epic": "Crawling",
+      "title": "Crawler configuration management",
+      "description": "Configure recurring collection jobs per crawlable Job Source.",
+      "acceptance": [
+        "Configurations are grouped by Job Source.",
+        "Schedules can be enabled/paused."
+      ],
+      "status": "Done",
+      "area": "Crawling",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-021",
+      "milestone": "M03",
+      "epic": "Crawling",
+      "title": "Crawler sessions and history",
+      "description": "Track active sessions, completed runs, failures, pauses and counts.",
+      "acceptance": [
+        "Active sessions are visible.",
+        "History is retained.",
+        "Failures expose diagnostics."
+      ],
+      "status": "Done",
+      "area": "Crawling",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Worker",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-022",
+      "milestone": "M03",
+      "epic": "Crawling",
+      "title": "Restricted-source collection policy",
+      "description": "Classify protected sources and use permitted alternatives rather than bypassing protections.",
+      "acceptance": [
+        "Restricted sources are not forced through brittle crawling.",
+        "Alternative acquisition methods remain available."
+      ],
+      "status": "Done",
+      "area": "Crawling",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Worker",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-023",
+      "milestone": "M03",
+      "epic": "Crawling",
+      "title": "Recurring scheduled discovery",
+      "description": "Run enabled crawlers repeatedly, including the intended four-hour collection cycle.",
+      "acceptance": [
+        "Enabled configurations run repeatedly.",
+        "Runs are independently observable.",
+        "Scheduler failures are recorded."
+      ],
+      "status": "Backlog",
+      "area": "Crawling",
+      "type": "Infrastructure",
+      "priority": "High",
+      "layer": "Worker",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-024",
+      "milestone": "M03",
+      "epic": "Crawling",
+      "title": "Freshness and recently-added tracking",
+      "description": "Distinguish recent jobs from old listings and surface newly discovered opportunities.",
+      "acceptance": [
+        "Posted/discovered timestamps are preserved.",
+        "Freshness rules are configurable."
+      ],
+      "status": "Done",
+      "area": "Crawling",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Database",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-030",
+      "milestone": "M04",
+      "epic": "Discovery",
+      "title": "Universal Search",
+      "description": "Search across external discovery channels without automatically turning results into engaged jobs.",
+      "acceptance": [
+        "Results preserve source/acquisition context.",
+        "Search results remain separate from engaged Jobs."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-031",
+      "milestone": "M04",
+      "epic": "Discovery",
+      "title": "Discovery Archive",
+      "description": "Store Universal Search results as user-specific records with review states.",
+      "acceptance": [
+        "To Review, Saved to Jobs, and Dismissed states exist.",
+        "Original query and acquisition context are retained."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-032",
+      "milestone": "M04",
+      "epic": "Discovery",
+      "title": "Promote discovery to engaged Job",
+      "description": "Save a discovery into the main Jobs workflow without losing provenance.",
+      "acceptance": [
+        "Save-to-Jobs creates/links the canonical job.",
+        "Original discovery context remains available."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-033",
+      "milestone": "M04",
+      "epic": "Discovery",
+      "title": "Later source classification",
+      "description": "Allow an initially unclassified discovery to be attached to a known Job Source.",
+      "acceptance": [
+        "Unclassified records can be reclassified.",
+        "Analytics retain acquisition history."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Backend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-040",
+      "milestone": "M05",
+      "epic": "Job Integrity",
+      "title": "Normalize Job Listing URLs",
+      "description": "Normalize listing URLs so equivalent representations can be detected.",
+      "acceptance": [
+        "Equivalent URLs normalize consistently.",
+        "Unique constraints protect canonical URLs."
+      ],
+      "status": "Done",
+      "area": "Jobs",
+      "type": "Engineering",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-041",
+      "milestone": "M05",
+      "epic": "Job Integrity",
+      "title": "LinkedIn currentJobId canonicalization",
+      "description": "Recognize LinkedIn search-result URLs containing currentJobId and canonicalize the underlying job.",
+      "acceptance": [
+        "currentJobId is recognized.",
+        "Duplicate saves are prevented."
+      ],
+      "status": "Done",
+      "area": "Jobs",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Backend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-042",
+      "milestone": "M05",
+      "epic": "Job Integrity",
+      "title": "Browser Companion duplicate protection",
+      "description": "Check uniqueness in the extension while keeping the backend authoritative for race safety.",
+      "acceptance": [
+        "Extension warns on known URLs.",
+        "Backend rejects duplicate writes."
+      ],
+      "status": "Done",
+      "area": "Browser Companion",
+      "type": "Engineering",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-043",
+      "milestone": "M05",
+      "epic": "Job Integrity",
+      "title": "Historical URL integrity backfill",
+      "description": "Normalize and repair historical URLs after uniqueness rules are introduced.",
+      "acceptance": [
+        "Existing records normalize.",
+        "Conflicts are handled deterministically."
+      ],
+      "status": "Done",
+      "area": "Jobs",
+      "type": "Engineering",
+      "priority": "High",
+      "layer": "Database",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-050",
+      "milestone": "M06",
+      "epic": "Applications",
+      "title": "Application pipeline and stage history",
+      "description": "Track applications through applied, screening, interview, offer, rejection, withdrawal, no-response and closure stages.",
+      "acceptance": [
+        "Application stage is explicit.",
+        "Stage history is retained.",
+        "Table and pipeline use the same state."
+      ],
+      "status": "Done",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-051",
+      "milestone": "M06",
+      "epic": "Applications",
+      "title": "Application provenance",
+      "description": "Store Search Profile, exact CV version, Found via, Applied via, notes and application metadata.",
+      "acceptance": [
+        "Exact CV version is recorded.",
+        "Found via and Applied via remain separate."
+      ],
+      "status": "Done",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-052",
+      "milestone": "M06",
+      "epic": "Applications",
+      "title": "Application filters and pipeline views",
+      "description": "Provide table and pipeline views with stage filters.",
+      "acceptance": [
+        "Applied, Interviewing, Rejected and Offers can be filtered."
+      ],
+      "status": "Done",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Frontend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-060",
+      "milestone": "M07",
+      "epic": "CV Intelligence",
+      "title": "CV upload and versioning",
+      "description": "Maintain immutable original CV sources and versioned prepared CV artifacts.",
+      "acceptance": [
+        "Original source is preserved.",
+        "Versions are auditable.",
+        "Search Profiles can select default CVs."
+      ],
+      "status": "Done",
+      "area": "CV Intelligence",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-061",
+      "milestone": "M07",
+      "epic": "CV Intelligence",
+      "title": "CV-to-job comparison",
+      "description": "Compare a CV against job requirements and identify evidence, gaps, partial matches and confirmation-needed items.",
+      "acceptance": [
+        "Requirements are represented.",
+        "Match items have evidence status.",
+        "Comparison identifies the CV version."
+      ],
+      "status": "Done",
+      "area": "CV Intelligence",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-062",
+      "milestone": "M07",
+      "epic": "CV Intelligence",
+      "title": "Truthful CV tailoring",
+      "description": "Suggest targeted CV improvements without inventing experience, credentials, dates, employers or achievements.",
+      "acceptance": [
+        "Suggestions reference confirmed evidence.",
+        "Unsupported claims are not presented as facts."
+      ],
+      "status": "Done",
+      "area": "CV Intelligence",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-063",
+      "milestone": "M07",
+      "epic": "CV Intelligence",
+      "title": "Template-preserving arbitrary DOCX editing",
+      "description": "Complete true arbitrary-template-preserving editing rather than relying only on retained originals and generated exports.",
+      "acceptance": [
+        "Original formatting survives supported edits.",
+        "Export can be compared with the original."
+      ],
+      "status": "Backlog",
+      "area": "CV Intelligence",
+      "type": "Engineering",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "XL",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-070",
+      "milestone": "M08",
+      "epic": "Browser Companion",
+      "title": "Job page detection and extraction",
+      "description": "Detect supported job pages and extract vacancy information for review.",
+      "acceptance": [
+        "Supported pages can be detected.",
+        "Title and description are extracted where available."
+      ],
+      "status": "Done",
+      "area": "Browser Companion",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Extension",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-071",
+      "milestone": "M08",
+      "epic": "Browser Companion",
+      "title": "CV selection and comparison in extension",
+      "description": "Select a prepared CV and compare it with the detected job.",
+      "acceptance": [
+        "CV can be selected.",
+        "Comparison and gaps are available before saving."
+      ],
+      "status": "Done",
+      "area": "Browser Companion",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Extension",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-072",
+      "milestone": "M08",
+      "epic": "Browser Companion",
+      "title": "Exact Save and Save + Applied flows",
+      "description": "Provide explicit save and save-plus-application actions.",
+      "acceptance": [
+        "Save creates/links the job.",
+        "Save + Applied creates the application."
+      ],
+      "status": "Done",
+      "area": "Browser Companion",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Extension",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-073",
+      "milestone": "M08",
+      "epic": "Browser Companion",
+      "title": "Production extension host configuration",
+      "description": "Use production API configuration and safe token management.",
+      "acceptance": [
+        "Production host is configurable.",
+        "Local and production settings remain separate."
+      ],
+      "status": "Done",
+      "area": "Browser Companion",
+      "type": "Infrastructure",
+      "priority": "High",
+      "layer": "Extension",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-080",
+      "milestone": "M09",
+      "epic": "Sharing & Notifications",
+      "title": "Share one or many jobs by email",
+      "description": "Share selected jobs through a configured webhook/email flow with client fallback.",
+      "acceptance": [
+        "Single and multi-job sharing work.",
+        "Webhook can be used when configured.",
+        "Fallback remains available."
+      ],
+      "status": "Done",
+      "area": "Jobs",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Frontend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-081",
+      "milestone": "M09",
+      "epic": "Sharing & Notifications",
+      "title": "Deep-link notifications",
+      "description": "Notification clicks navigate directly to the relevant Job, Application or Job Source.",
+      "acceptance": [
+        "Each notification has a target.",
+        "Invalid targets fail safely."
+      ],
+      "status": "Done",
+      "area": "UX",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Frontend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-090",
+      "milestone": "M10",
+      "epic": "Search Profiles",
+      "title": "Multi-profile search configuration",
+      "description": "Support role/geography profiles with keywords, exclusions, locations, categories, remote-only, freshness and expiry rules.",
+      "acceptance": [
+        "Profiles can be enabled/paused.",
+        "Crawler/search operations can use a selected profile."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-100",
+      "milestone": "M11",
+      "epic": "Reporting & Analytics",
+      "title": "Dashboard and operational reporting",
+      "description": "Provide dashboard views for discovery, jobs, applications, interviews, offers, risk and system health.",
+      "acceptance": [
+        "Core counts are visible.",
+        "Date ranges are explicit.",
+        "Metrics link to underlying records."
+      ],
+      "status": "Backlog",
+      "area": "Analytics",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-101",
+      "milestone": "M11",
+      "epic": "Reporting & Analytics",
+      "title": "Source contribution and effectiveness reporting",
+      "description": "Measure discovery contribution, applications, response/interview/offer conversion, duplicates, stale jobs and source health without conflating provenance.",
+      "acceptance": [
+        "Publishing source and acquisition remain distinct.",
+        "Applied-via remains separately reportable."
+      ],
+      "status": "Backlog",
+      "area": "Analytics",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-110",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Application Pack",
+      "description": "Bundle job snapshot, exact CV version, cover letter, application answers, recruiter/contact data, notes and interview material.",
+      "acceptance": [
+        "Application artifacts are versioned.",
+        "The pack reconstructs what was submitted."
+      ],
+      "status": "Backlog",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-111",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Achievement / Evidence Bank",
+      "description": "Maintain confirmed career evidence reusable for truthful CV tailoring, cover letters, applications and interviews.",
+      "acceptance": [
+        "Evidence has context/source.",
+        "AI suggestions can reference confirmed evidence."
+      ],
+      "status": "Backlog",
+      "area": "CV Intelligence",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-112",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Cover letter intelligence",
+      "description": "Generate job-specific cover letters from confirmed CV evidence and job requirements.",
+      "acceptance": [
+        "Claims are grounded in confirmed evidence.",
+        "Drafts are editable and versioned."
+      ],
+      "status": "Backlog",
+      "area": "CV Intelligence",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-113",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Application form assistant",
+      "description": "Assist with repetitive application questions using confirmed profile and job context.",
+      "acceptance": [
+        "Answers are grounded in evidence.",
+        "User reviews before submission."
+      ],
+      "status": "Backlog",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "XL",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-114",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Interview workspace",
+      "description": "Prepare interview context from the exact job, application pack, CV evidence, notes and interview history.",
+      "acceptance": [
+        "Interview material is tied to the application.",
+        "Preparation notes are editable."
+      ],
+      "status": "Backlog",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-115",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Recruiter/contact CRM",
+      "description": "Track recruiters and hiring contacts, relationships, notes and application associations.",
+      "acceptance": [
+        "Contacts link to organizations/applications.",
+        "Contact history is retained."
+      ],
+      "status": "Backlog",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Low",
+      "layer": "Backend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-116",
+      "milestone": "M12",
+      "epic": "Career Operations",
+      "title": "Follow-up engine",
+      "description": "Track follow-up dates, reminders, responses and communication history.",
+      "acceptance": [
+        "Follow-ups can be scheduled.",
+        "Notifications deep-link to applications/contacts."
+      ],
+      "status": "Backlog",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-120",
+      "milestone": "M13",
+      "epic": "Career Intelligence",
+      "title": "Skill-gap intelligence across jobs",
+      "description": "Aggregate repeated job requirements to identify recurring skills and evidence gaps.",
+      "acceptance": [
+        "Requirements are normalized.",
+        "Gaps reference actual jobs."
+      ],
+      "status": "Backlog",
+      "area": "Analytics",
+      "type": "Feature",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "XL",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-121",
+      "milestone": "M13",
+      "epic": "Career Intelligence",
+      "title": "Market intelligence",
+      "description": "Analyze demand by role, location, work mode, source, organization, salary where available and recurring requirements.",
+      "acceptance": [
+        "Metrics are time-bounded.",
+        "Raw data remains traceable."
+      ],
+      "status": "Backlog",
+      "area": "Analytics",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "XL",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-122",
+      "milestone": "M13",
+      "epic": "Career Intelligence",
+      "title": "Application strategy experiments",
+      "description": "Track changes to search/application strategies and their observed outcomes descriptively.",
+      "acceptance": [
+        "Strategy changes are timestamped.",
+        "Applications can be associated with a strategy."
+      ],
+      "status": "Backlog",
+      "area": "Analytics",
+      "type": "Feature",
+      "priority": "Low",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-123",
+      "milestone": "M13",
+      "epic": "Career Intelligence",
+      "title": "Opportunity review queue",
+      "description": "Provide a transparent review queue using configurable freshness, fit, risk, source and user-defined criteria.",
+      "acceptance": [
+        "Queue criteria are visible.",
+        "User can override queue decisions."
+      ],
+      "status": "Backlog",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-124",
+      "milestone": "M13",
+      "epic": "Career Intelligence",
+      "title": "Offer management",
+      "description": "Track offer details, deadlines, compensation components, negotiation notes and final decision.",
+      "acceptance": [
+        "Offer versions are retained.",
+        "Deadlines can trigger reminders."
+      ],
+      "status": "Backlog",
+      "area": "Applications",
+      "type": "Feature",
+      "priority": "Medium",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-130",
+      "milestone": "M14",
+      "epic": "Frontend Architecture",
+      "title": "React + RTK Query production architecture",
+      "description": "Move shared server state toward Redux Toolkit/RTK Query and feature-oriented modules.",
+      "acceptance": [
+        "Server state is centralized.",
+        "Pages remain thin.",
+        "Feature boundaries are documented."
+      ],
+      "status": "Backlog",
+      "area": "Platform",
+      "type": "Architecture",
+      "priority": "High",
+      "layer": "Frontend",
+      "effort": "XL",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-131",
+      "milestone": "M14",
+      "epic": "Frontend Architecture",
+      "title": "Preserve approved visual shell",
+      "description": "Keep the dark navy operational shell, dense sidebar, master-detail layouts and progressive disclosure while improving maintainability.",
+      "acceptance": [
+        "No unintended reversion to older UI.",
+        "Core workflows remain usable."
+      ],
+      "status": "Done",
+      "area": "UX",
+      "type": "Architecture",
+      "priority": "Critical",
+      "layer": "Frontend",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-132",
+      "milestone": "M14",
+      "epic": "Frontend Architecture",
+      "title": "Discovery Archive navigation",
+      "description": "Expose Discovery Archive as a dedicated navigation destination while keeping raw search results out of All Jobs.",
+      "acceptance": [
+        "Dedicated route exists.",
+        "All Jobs does not automatically contain raw Universal Search results."
+      ],
+      "status": "Done",
+      "area": "Discovery",
+      "type": "Feature",
+      "priority": "Critical",
+      "layer": "Frontend",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-140",
+      "milestone": "M15",
+      "epic": "Production Engineering",
+      "title": "Prisma production migration strategy",
+      "description": "Baseline/squash legacy development migrations when needed and use migrate deploy in production.",
+      "acceptance": [
+        "Empty production DB can initialize.",
+        "Production never uses migrate dev.",
+        "Migration is tested on a disposable DB."
+      ],
+      "status": "Ready",
+      "area": "DevOps",
+      "type": "Infrastructure",
+      "priority": "Critical",
+      "layer": "Database",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-141",
+      "milestone": "M15",
+      "epic": "Production Engineering",
+      "title": "Production deployment topology",
+      "description": "Deploy frontend, API, worker and PostgreSQL as separate production responsibilities.",
+      "acceptance": [
+        "Frontend is independently deployable.",
+        "API and worker are independently deployable.",
+        "Secrets are managed securely."
+      ],
+      "status": "Ready",
+      "area": "DevOps",
+      "type": "Infrastructure",
+      "priority": "Critical",
+      "layer": "DevOps",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-142",
+      "milestone": "M15",
+      "epic": "Production Engineering",
+      "title": "Production domains, cookies and CORS",
+      "description": "Validate secure cookies, CORS, CSRF considerations and extension API configuration for production.",
+      "acceptance": [
+        "Secure cookies work.",
+        "CORS is explicit.",
+        "Authentication remains protected."
+      ],
+      "status": "Ready",
+      "area": "Security",
+      "type": "Infrastructure",
+      "priority": "Critical",
+      "layer": "DevOps",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-143",
+      "milestone": "M15",
+      "epic": "Production Engineering",
+      "title": "Health checks and worker observability",
+      "description": "Expose API health/readiness and make background worker failures visible.",
+      "acceptance": [
+        "API health endpoint exists.",
+        "Readiness can detect DB failure.",
+        "Worker errors carry run identifiers."
+      ],
+      "status": "Ready",
+      "area": "DevOps",
+      "type": "Infrastructure",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-144",
+      "milestone": "M15",
+      "epic": "Production Engineering",
+      "title": "CI validation pipeline",
+      "description": "Run type checks, tests, Prisma generation, builds and migration validation before production deployment.",
+      "acceptance": [
+        "Pull requests fail on validation errors.",
+        "Production builds are reproducible."
+      ],
+      "status": "Ready",
+      "area": "DevOps",
+      "type": "Infrastructure",
+      "priority": "High",
+      "layer": "DevOps",
+      "effort": "M",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-150",
+      "milestone": "M16",
+      "epic": "Documentation",
+      "title": "Product and architecture documentation",
+      "description": "Maintain domain glossary, flows, architecture decisions, deployment instructions, crawler policy and testing checklists.",
+      "acceptance": [
+        "New developers can understand the core model.",
+        "Production setup is reproducible."
+      ],
+      "status": "Backlog",
+      "area": "Platform",
+      "type": "Documentation",
+      "priority": "High",
+      "layer": "Cross-cutting",
+      "effort": "L",
+      "acceptanceCriteria": []
+    },
+    {
+      "id": "JI-151",
+      "milestone": "M16",
+      "epic": "Documentation",
+      "title": "GitHub Project as code",
+      "description": "Keep the roadmap manifest in the repository and synchronize issues/project items through the GitHub API.",
+      "acceptance": [
+        "Roadmap is version-controlled.",
+        "Dry-run validates the manifest.",
+        "Apply mode creates/links GitHub issues."
+      ],
+      "status": "In Progress",
+      "area": "Platform",
+      "type": "Infrastructure",
+      "priority": "High",
+      "layer": "DevOps",
+      "effort": "M",
+      "acceptanceCriteria": []
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "M01",
+    "name": "Foundation & Domain Model",
+    "description": "Canonical Job, Listing, Source, Organization and provenance."
+  },
+  {
+    "id": "M02",
+    "name": "Job Source Management",
+    "description": "Source lifecycle, collection capability, URL verification and integrity."
+  },
+  {
+    "id": "M03",
+    "name": "Crawling",
+    "description": "Crawler configuration, sessions, history, policy and recurring collection."
+  },
+  {
+    "id": "M04",
+    "name": "Discovery",
+    "description": "Universal Search, Discovery Archive and discovery promotion."
+  },
+  {
+    "id": "M05",
+    "name": "Job Integrity",
+    "description": "URL normalization, canonicalization, duplicate protection and backfill."
+  },
+  {
+    "id": "M06",
+    "name": "Applications",
+    "description": "Application pipeline, stage history, provenance and views."
+  },
+  {
+    "id": "M07",
+    "name": "CV Intelligence",
+    "description": "CV versions, comparison, truthful tailoring and exports."
+  },
+  {
+    "id": "M08",
+    "name": "Browser Companion",
+    "description": "Extraction, comparison, save/apply flows and production config."
+  },
+  {
+    "id": "M09",
+    "name": "Sharing & Notifications",
+    "description": "Job sharing and deep-linked notifications."
+  },
+  {
+    "id": "M10",
+    "name": "Search Profiles",
+    "description": "Multiple role/geography search targets and rules."
+  },
+  {
+    "id": "M11",
+    "name": "Reporting & Analytics",
+    "description": "Dashboard, source contribution, conversion and health reporting."
+  },
+  {
+    "id": "M12",
+    "name": "Career Operations",
+    "description": "Application packs, evidence, letters, forms, interviews, contacts and follow-ups."
+  },
+  {
+    "id": "M13",
+    "name": "Career Intelligence",
+    "description": "Skill gaps, market intelligence, strategy experiments, review queue and offers."
+  },
+  {
+    "id": "M14",
+    "name": "Frontend Architecture",
+    "description": "React/RTK Query architecture and preservation of the approved shell."
+  },
+  {
+    "id": "M15",
+    "name": "Production Engineering",
+    "description": "Prisma migration, deployment topology, domains, health and CI."
+  },
+  {
+    "id": "M16",
+    "name": "Documentation",
+    "description": "Product/architecture documentation and GitHub Project automation."
+  }
+]

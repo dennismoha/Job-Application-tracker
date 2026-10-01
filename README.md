@@ -289,3 +289,4 @@ The uploaded prototype is no longer a visual reference layered over another inte
 v1.10 keeps the locked v1.7/v1.8 UI and builds directly on the v1.9 Job Source architecture. It adds single/multi-job email sharing, editable/deletable Job Sources, exact notification deep-links, application-stage filtering, safe redirect/404 checks for user-saved URLs, normalized Job Source domains, and normalized/unique Job Listing URLs. The Browser Companion checks URL uniqueness before saving and the backend repeats the constraint.
 
 See `docs/v1.10-sharing-url-integrity.md` and `docs/validation-v1.10.md`.
+

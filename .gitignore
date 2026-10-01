@@ -6,6 +6,7 @@ dist/
 coverage/
 *.log
 .DS_Store
+job-intelligence-github-roadmap-kit-v2/
 
 # Prisma / local databases
 *.db

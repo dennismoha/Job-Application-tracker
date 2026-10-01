@@ -35,7 +35,12 @@
     "worker:prod": "node dist/worker.js",
     "ci": "npm run project:check && npm run db:generate && npm run typecheck && npm run lint && npm run format:check && npm test && npm run docs:build && npm run web:typecheck && npm run web:lint && npm run web:build",
     "ui:check": "node scripts/check-v17-ui-shell.mjs",
-    "db:backfill-url-integrity": "tsx scripts/backfill-url-integrity.ts"
+    "db:backfill-url-integrity": "tsx scripts/backfill-url-integrity.ts",
+    "github:roadmap:validate": "node .github/project/push-project.mjs --validate",
+    "github:roadmap:push": "node --env-file=.env .github/project/push-project.mjs",
+    "github:roadmap:pull": "node --env-file=.env .github/project/pull-project.mjs",
+    "github:roadmap:sync": "node --env-file=.env .github/project/sync-project.mjs",
+    "github:roadmap:sync:dry": "node --env-file=.env .github/project/sync-project.mjs --dry-run"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
