@@ -1578,6 +1578,7 @@ model CvVersion {
   originalFileName String?
   mimeType String?
   originalFileData Bytes?
+  cloudinaryPublicId String?
 
   plainText String
   structuredData Json?

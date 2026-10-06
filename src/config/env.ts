@@ -23,6 +23,9 @@ const environmentSchema = z.object({
   AI_DEDUP_ENABLED: z.string().default('false').transform((value) => value === 'true'),
   API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60000),
   API_RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(240),
+  CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
 });
 
 export const env = environmentSchema.parse(process.env);

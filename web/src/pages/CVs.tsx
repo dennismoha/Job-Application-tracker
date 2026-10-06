@@ -15,6 +15,7 @@ interface VersionDetail extends CvVersionSummary {
   cv: { id: string; name: string };
   originalFileName?: string | null;
   mimeType?: string | null;
+  cloudinaryPreviewUrl?: string | null;
 }
 
 function readAsBase64(file: File): Promise<string> {
@@ -877,6 +878,19 @@ export default function CVs({
               {preview.originalFileName && (
                 <div style={{ fontSize: 10, color: '#06d6a0', marginTop: 4 }}>
                   Original format reference: {preview.originalFileName}
+                  {preview.cloudinaryPreviewUrl && (
+                    <>
+                      {' · '}
+                      <a
+                        href={preview.cloudinaryPreviewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: '#60a5fa' }}
+                      >
+                        Open original in new tab
+                      </a>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -888,28 +902,43 @@ export default function CVs({
             </button>
           </div>
           <div style={{ padding: 20, background: '#111827' }}>
-            <div
-              style={{
-                maxWidth: 690,
-                margin: '0 auto',
-                background: '#fff',
-                color: '#111',
-                padding: '44px 50px',
-                minHeight: 850,
-              }}
-            >
-              <pre
+            {preview.cloudinaryPreviewUrl ? (
+              <iframe
+                src={preview.cloudinaryPreviewUrl}
+                title={`Original CV document: ${preview.originalFileName ?? preview.cv.name}`}
                 style={{
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'Arial, sans-serif',
-                  fontSize: 11,
-                  lineHeight: 1.55,
-                  margin: 0,
+                  display: 'block',
+                  width: '100%',
+                  height: '75vh',
+                  minHeight: 600,
+                  border: 0,
+                  background: '#fff',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  maxWidth: 690,
+                  margin: '0 auto',
+                  background: '#fff',
+                  color: '#111',
+                  padding: '44px 50px',
+                  minHeight: 850,
                 }}
               >
-                {preview.plainText}
-              </pre>
-            </div>
+                <pre
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: 11,
+                    lineHeight: 1.55,
+                    margin: 0,
+                  }}
+                >
+                  {preview.plainText}
+                </pre>
+              </div>
+            )}
           </div>
           <div
             style={{
@@ -920,7 +949,9 @@ export default function CVs({
             }}
           >
             <span style={{ fontSize: 10, color: '#475569' }}>
-              Content preview. Use the source document as the visual formatting reference.
+              {preview.cloudinaryPreviewUrl
+                ? 'Original document preview.'
+                : 'Text preview. The original document is unavailable for this CV.'}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               <button

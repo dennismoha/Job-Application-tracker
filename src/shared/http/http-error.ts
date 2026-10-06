@@ -38,3 +38,9 @@ export class ConflictError extends HttpError {
     super(message, 409);
   }
 }
+
+export class ServiceUnavailableError extends HttpError {
+  constructor(message: string) {
+    super(message, 503);
+  }
+}
