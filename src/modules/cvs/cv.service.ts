@@ -11,6 +11,7 @@ import {
 import { BadRequestError, NotFoundError } from '../../shared/http/http-error.js';
 import { prisma } from '../../shared/prisma/prisma-client.js';
 import { aiClient } from '../ai/ai-client.js';
+import { createCvPreviewUrl, deleteCvOriginal, uploadCvOriginal } from './cv-cloudinary.service.js';
 import { createSimpleDocx, createSimplePdf, extractTextFromCvUpload } from './cv-file.service.js';
 import {
   compareRequirementToCv,
@@ -281,7 +282,12 @@ export const cvService = {
   },
 
   getVersion(userId: string, versionId: string) {
-    return ownedVersion(userId, versionId);
+    return ownedVersion(userId, versionId).then((version) => ({
+      ...version,
+      cloudinaryPreviewUrl: version.cloudinaryPublicId
+        ? createCvPreviewUrl(version.cloudinaryPublicId)
+        : null,
+    }));
   },
 
   async create(userId: string, input: CreateCvInput) {
@@ -315,30 +321,42 @@ export const cvService = {
 
   async upload(userId: string, input: UploadCvInput) {
     const parsed = await extractTextFromCvUpload(input);
-    const cv = await prisma.$transaction(async (tx) => {
-      if (input.isMaster) await tx.cv.updateMany({ where: { userId, isMaster: true }, data: { isMaster: false } });
-      const created = await tx.cv.create({
-        data: {
-          userId,
-          name: input.name,
-          ...(input.description ? { description: input.description } : {}),
-          isMaster: input.isMaster,
-        },
+    const cloudinaryPublicId = await uploadCvOriginal(parsed.buffer, input.fileName, parsed.mimeType);
+    let cv;
+    try {
+      cv = await prisma.$transaction(async (tx) => {
+        if (input.isMaster) await tx.cv.updateMany({ where: { userId, isMaster: true }, data: { isMaster: false } });
+        const created = await tx.cv.create({
+          data: {
+            userId,
+            name: input.name,
+            ...(input.description ? { description: input.description } : {}),
+            isMaster: input.isMaster,
+          },
+        });
+        await tx.cvVersion.create({
+          data: {
+            cvId: created.id,
+            versionNumber: 1,
+            label: 'Uploaded original',
+            sourceType: CvSourceType.UPLOADED,
+            originalFileName: input.fileName,
+            mimeType: parsed.mimeType,
+            originalFileData: parsed.buffer,
+            cloudinaryPublicId,
+            plainText: parsed.text,
+          },
+        });
+        return created;
       });
-      await tx.cvVersion.create({
-        data: {
-          cvId: created.id,
-          versionNumber: 1,
-          label: 'Uploaded original',
-          sourceType: CvSourceType.UPLOADED,
-          originalFileName: input.fileName,
-          mimeType: parsed.mimeType,
-          originalFileData: parsed.buffer,
-          plainText: parsed.text,
-        },
-      });
-      return created;
-    });
+    } catch (error) {
+      try {
+        await deleteCvOriginal(cloudinaryPublicId);
+      } catch (cleanupError) {
+        console.error('Failed to remove orphaned Cloudinary CV asset after database upload failure.', cleanupError);
+      }
+      throw error;
+    }
     await linkProfile(userId, cv.id, input.profileId, input.makeDefault);
     return ownedCv(userId, cv.id);
   },
