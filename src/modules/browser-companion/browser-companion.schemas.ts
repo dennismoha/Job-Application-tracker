@@ -23,7 +23,6 @@ export const browserContextSchema = z.object({
   url: z.string().url(),
 });
 
-
 export const analyzeBrowserPageSchema = z.object({
   url: z.string().url(),
   pageTitle: z.string().trim().max(500).optional(),
@@ -39,3 +38,68 @@ export const compareBrowserPageSchema = analyzeBrowserPageSchema.extend({
 export const prepareBrowserCvSchema = captureJobSchema.extend({
   cvVersionId: z.string().min(1),
 });
+
+const compactCandidateSchema = z.object({
+  score: z.number(),
+  heading: z.string().nullable(),
+  tag: z.string(),
+  role: z.string().nullable(),
+  selector: z.string().nullable(),
+  matchedSignals: z.array(z.string()),
+  text: z.string().max(12_000),
+});
+
+export const compactBrowserCaptureSchema = z.object({
+  schemaVersion: z.literal(2),
+  purpose: z.string(),
+  page: z.object({
+    url: z.string().url(),
+    title: z.string().max(500),
+    hostname: z.string(),
+    pathname: z.string(),
+  }),
+  selectedJobCandidate: compactCandidateSchema.nullable(),
+  alternativeCandidates: z
+    .array(
+      z.object({
+        rank: z.number(),
+        score: z.number(),
+        heading: z.string().nullable(),
+        tag: z.string(),
+        role: z.string().nullable(),
+        selector: z.string().nullable(),
+        matchedSignals: z.array(z.string()),
+        text: z.string().max(2_000),
+      }),
+    )
+    .max(4),
+  headings: z
+    .array(
+      z.object({
+        level: z.number().int().min(1).max(6),
+        text: z.string().max(1_000),
+        selector: z.string(),
+        attributes: z.record(z.string(), z.string()),
+      }),
+    )
+    .max(80),
+  jobPostingStructuredData: z.array(z.unknown()).max(3),
+  pageSignals: z.object({
+    bodyTextLength: z.number().int().nonnegative(),
+    candidateCount: z.number().int().nonnegative(),
+    structuredDataBlockCount: z.number().int().nonnegative(),
+  }),
+  stats: z.object({
+    gptInputCharacters: z.number().int().nonnegative(),
+    selectedCandidateCharacters: z.number().int().nonnegative(),
+  }),
+});
+
+export type CompactBrowserCapture = z.infer<typeof compactBrowserCaptureSchema>;
+
+export const compareCompactBrowserPageSchema = z.object({
+  capture: compactBrowserCaptureSchema,
+  cvVersionId: z.string().min(1),
+});
+
+export const analyzeCompactBrowserPageSchema = compactBrowserCaptureSchema;

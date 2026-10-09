@@ -22,19 +22,549 @@ async function api(path, options = {}) {
     },
   });
   const body = await response.json().catch(() => null);
+  console.log('API response:', { path, status: response ,body });
   if (!response.ok) throw new Error(body?.message ?? `Request failed (${response.status})`);
   return body;
 }
 
-function capturePage() {
-  const structuredData = [...document.querySelectorAll('script[type="application/ld+json"]')].flatMap((node) => {
-    try { return [JSON.parse(node.textContent || '')]; } catch { return []; }
+async function capturePage() {
+  const startedAt = performance.now();
+
+  const cleanText = (value) =>
+    String(value || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n[ \t]+/g, "\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+  const isVisible = (element) => {
+    if (!(element instanceof Element)) return false;
+
+    const style = window.getComputedStyle(element);
+
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.opacity === "0"
+    ) {
+      return false;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    return rect.width > 0 && rect.height > 0;
+  };
+
+  const cssPath = (element) => {
+    if (!(element instanceof Element)) return null;
+
+    const parts = [];
+    let current = element;
+
+    while (
+      current &&
+      current.nodeType === Node.ELEMENT_NODE &&
+      parts.length < 8
+    ) {
+      let part = current.tagName.toLowerCase();
+
+      if (current.id) {
+        part += `#${CSS.escape(current.id)}`;
+        parts.unshift(part);
+        break;
+      }
+
+      const classes = [...current.classList]
+        .filter(Boolean)
+        .slice(0, 3);
+
+      if (classes.length) {
+        part += `.${classes.map(CSS.escape).join(".")}`;
+      }
+
+      const parent = current.parentElement;
+
+      if (parent) {
+        const siblings = [...parent.children].filter(
+          (child) => child.tagName === current.tagName,
+        );
+
+        if (siblings.length > 1) {
+          part += `:nth-of-type(${siblings.indexOf(current) + 1})`;
+        }
+      }
+
+      parts.unshift(part);
+      current = parent;
+    }
+
+    return parts.join(" > ");
+  };
+
+  const attributes = (element) => {
+    if (!(element instanceof Element)) return {};
+
+    const result = {};
+
+    for (const attribute of element.attributes) {
+      const name = attribute.name;
+
+      if (
+        name === "class" ||
+        name === "id" ||
+        name.startsWith("data-") ||
+        name.startsWith("aria-") ||
+        name === "role" ||
+        name === "name" ||
+        name === "type" ||
+        name === "href"
+      ) {
+        result[name] = attribute.value;
+      }
+    }
+
+    return result;
+  };
+
+  const elementSummary = (element) => {
+    const text = cleanText(
+      element.innerText || element.textContent || "",
+    );
+
+    const rect = element.getBoundingClientRect();
+
+    return {
+      tag: element.tagName.toLowerCase(),
+      role: element.getAttribute("role"),
+      id: element.id || null,
+      className:
+        typeof element.className === "string"
+          ? element.className
+          : null,
+      attributes: attributes(element),
+      heading:
+        cleanText(
+          element.querySelector("h1,h2,h3,h4,h5,h6")?.innerText ||
+            (element.matches("h1,h2,h3,h4,h5,h6")
+              ? element.innerText
+              : ""),
+        ) || null,
+      text,
+      textLength: text.length,
+      rect: {
+        top: Math.round(rect.top),
+        left: Math.round(rect.left),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+      selector: cssPath(element),
+    };
+  };
+
+  const uniqueElements = (elements) => {
+    const seen = new Set();
+
+    return elements.filter((element) => {
+      if (seen.has(element)) return false;
+      seen.add(element);
+      return true;
+    });
+  };
+
+  const semanticSelector =
+    "main,article,section,[role='main'],[role='article']," +
+    "[role='region'],[role='dialog'],[role='tabpanel'],aside";
+
+  const headings = [
+    ...document.querySelectorAll("h1,h2,h3,h4,h5,h6"),
+  ]
+    .filter(isVisible)
+    .map((element) => ({
+      level: Number(element.tagName.substring(1)),
+      text: cleanText(element.innerText),
+      selector: cssPath(element),
+      attributes: attributes(element),
+    }))
+    .filter((item) => item.text)
+    .slice(0, 150);
+
+  const links = [...document.querySelectorAll("a")]
+    .filter(isVisible)
+    .map((element) => ({
+      text: cleanText(element.innerText || element.textContent),
+      href: element.href || null,
+      target: element.target || null,
+      rel: element.rel || null,
+      selector: cssPath(element),
+    }))
+    .filter((item) => item.text || item.href)
+    .slice(0, 300);
+
+  const buttons = [
+    ...document.querySelectorAll(
+      "button,[role='button'],input[type='button'],input[type='submit']",
+    ),
+  ]
+    .filter(isVisible)
+    .map((element) => ({
+      tag: element.tagName.toLowerCase(),
+      text: cleanText(
+        element.innerText ||
+          element.textContent ||
+          element.getAttribute("aria-label") ||
+          element.getAttribute("value") ||
+          "",
+      ),
+      ariaLabel: element.getAttribute("aria-label"),
+      type: element.getAttribute("type"),
+      selector: cssPath(element),
+      attributes: attributes(element),
+    }))
+    .filter((item) => item.text || item.ariaLabel)
+    .slice(0, 150);
+
+  const semanticElements = uniqueElements([
+    ...document.querySelectorAll(semanticSelector),
+  ]).filter(isVisible);
+
+  const regions = semanticElements
+    .map(elementSummary)
+    .filter((region) => region.textLength >= 80)
+    .sort((a, b) => b.textLength - a.textLength)
+    .slice(0, 80);
+
+  const jobSignalPattern = [
+    /\babout the job\b/i,
+    /\babout the role\b/i,
+    /\bjob description\b/i,
+    /\bposition overview\b/i,
+    /\bkey responsibilities\b/i,
+    /\bresponsibilities\b/i,
+    /\bwhat you'll do\b/i,
+    /\bwhat you will do\b/i,
+    /\brequired qualifications\b/i,
+    /\bpreferred qualifications\b/i,
+    /\bqualifications\b/i,
+    /\brequirements\b/i,
+    /\bskills\b/i,
+    /\bexperience\b/i,
+    /\beducation\b/i,
+    /\bapply\b/i,
+    /\bsave\b/i,
+    /\bfull-time\b/i,
+    /\bpart-time\b/i,
+    /\bcontract\b/i,
+    /\bremote\b/i,
+    /\bsalary\b/i,
+    /\bcompensation\b/i,
+    /\bposted\b/i,
+  ];
+
+  const candidateElements = uniqueElements([
+    ...document.querySelectorAll(semanticSelector),
+    ...document.querySelectorAll("h1,h2,h3"),
+  ]).filter(isVisible);
+
+  const jobCandidates = [];
+
+  for (const element of candidateElements) {
+    const text = cleanText(
+      element.innerText || element.textContent || "",
+    );
+
+    if (text.length < 100) continue;
+
+    const matchedSignals = jobSignalPattern.filter((pattern) =>
+      pattern.test(text),
+    );
+
+    const heading =
+      cleanText(
+        element.querySelector("h1,h2,h3")?.innerText ||
+          (element.matches("h1,h2,h3") ? element.innerText : ""),
+      ) || null;
+
+    const score =
+      matchedSignals.length * 2 +
+      (heading ? 3 : 0) +
+      (/\bjob\b|\bengineer\b|\bdeveloper\b|\bteacher\b|\banalyst\b|\bmanager\b|\bspecialist\b|\bdirector\b/i.test(
+        heading || "",
+      )
+        ? 4
+        : 0) +
+      (/\bapply\b/i.test(text) ? 2 : 0) +
+      (/\brequirements\b|\bqualifications\b|\bresponsibilities\b/i.test(
+        text,
+      )
+        ? 4
+        : 0);
+
+    if (score < 6) continue;
+
+    const summary = elementSummary(element);
+
+    summary.score = score;
+    summary.matchedSignals = matchedSignals.map(
+      (pattern) => pattern.source,
+    );
+
+    jobCandidates.push(summary);
+  }
+
+  jobCandidates.sort(
+    (a, b) => b.score - a.score || b.textLength - a.textLength,
+  );
+
+  const structuredData = [
+    ...document.querySelectorAll(
+      'script[type="application/ld+json"]',
+    ),
+  ].map((script) => {
+    const raw = script.textContent || "";
+
+    try {
+      return { parsed: true, data: JSON.parse(raw) };
+    } catch {
+      return { parsed: false, raw: raw.slice(0, 20000) };
+    }
   });
-  const selection = window.getSelection()?.toString().trim();
-  const main = document.querySelector('main, [role="main"], article');
-  const pageText = (main?.innerText || document.body.innerText || '').slice(0, 100000);
-  return { url: location.href, pageTitle: document.title, selectedText: selection || undefined, pageText, structuredData };
+
+  const extractJobPostingData = (blocks) => {
+    const result = [];
+
+    const visit = (value) => {
+      if (!value || typeof value !== "object") return;
+
+      if (Array.isArray(value)) {
+        value.forEach(visit);
+        return;
+      }
+
+      const type = value["@type"];
+      const types = Array.isArray(type) ? type : [type];
+
+      if (
+        types.some(
+          (item) =>
+            String(item).toLowerCase() === "jobposting",
+        )
+      ) {
+        result.push(limitObject(value, 8000));
+      }
+
+      Object.values(value).forEach(visit);
+    };
+
+    blocks.forEach((block) => {
+      if (block?.parsed) visit(block.data);
+    });
+
+    return result.slice(0, 3);
+  };
+
+  const limitObject = (value, maxCharacters) => {
+    const seen = new WeakSet();
+
+    const walk = (item) => {
+      if (item == null || typeof item !== "object") return item;
+
+      if (seen.has(item)) return "[Circular]";
+      seen.add(item);
+
+      if (Array.isArray(item)) {
+        return item.slice(0, 50).map(walk);
+      }
+
+      const output = {};
+
+      for (const [key, child] of Object.entries(item)) {
+        if (["image", "logo", "sameAs"].includes(key)) continue;
+        output[key] = walk(child);
+      }
+
+      return output;
+    };
+
+    const result = walk(value);
+    const json = JSON.stringify(result);
+
+    if (json.length <= maxCharacters) return result;
+
+    return {
+      truncated: true,
+      text: json.slice(0, maxCharacters),
+    };
+  };
+
+  const compactText = (value, maxCharacters) => {
+    const text = String(value || "").trim();
+
+    if (text.length <= maxCharacters) return text;
+
+    const headLength = Math.floor(maxCharacters * 0.55);
+    const tailLength = Math.floor(maxCharacters * 0.35);
+
+    const head = text.slice(0, headLength);
+    const tail = text.slice(-tailLength);
+
+    const sectionChunks = extractImportantSectionChunks(
+      text,
+      maxCharacters - head.length - tail.length,
+    );
+
+    return (
+      `${head}\n\n[...middle condensed...]\n\n` +
+      `${sectionChunks}\n\n[...tail...]\n\n${tail}`
+    );
+  };
+
+  const extractImportantSectionChunks = (text, budget) => {
+    const sectionPattern =
+      /(^|\n)\s*(about the job|about the role|job description|position overview|key responsibilities|responsibilities|what you'll do|what you will do|required qualifications|preferred qualifications|qualifications|requirements|skills|experience|education|benefits|compensation|about the company)\s*:?\s*/gi;
+
+    const matches = [...text.matchAll(sectionPattern)];
+    const chunks = [];
+
+    for (let index = 0; index < matches.length; index += 1) {
+      const start = matches[index].index ?? 0;
+      const end = matches[index + 1]?.index ?? text.length;
+
+      const chunk = text
+        .slice(start, Math.min(end, start + 2600))
+        .trim();
+
+      if (chunk) chunks.push(chunk);
+      if (chunks.join("\n\n").length >= budget) break;
+    }
+
+    return chunks.join("\n\n").slice(0, Math.max(0, budget));
+  };
+
+  const visibleBodyText = cleanText(
+    document.body?.innerText || "",
+  );
+
+  const rawCapture = {
+    schemaVersion: 1,
+    capturedAt: new Date().toISOString(),
+    url: location.href,
+    urlHostname: location.hostname,
+    urlPathname: location.pathname,
+    urlSearch: location.search,
+    urlHash: location.hash,
+    pageTitle: document.title,
+    document: {
+      readyState: document.readyState,
+      bodyText: visibleBodyText,
+      bodyTextLength: visibleBodyText.length,
+      htmlLang: document.documentElement.lang || null,
+    },
+    headings,
+    links,
+    buttons,
+    meta: [...document.querySelectorAll("meta")]
+      .map((element) => ({
+        name:
+          element.getAttribute("name") ||
+          element.getAttribute("property") ||
+          element.getAttribute("http-equiv"),
+        content: element.getAttribute("content"),
+      }))
+      .filter((item) => item.name && item.content)
+      .slice(0, 150),
+    structuredData,
+    regions,
+    jobCandidates,
+    stats: {
+      visibleTextCharacters: visibleBodyText.length,
+      headingCount: headings.length,
+      linkCount: links.length,
+      buttonCount: buttons.length,
+      regionCount: semanticElements.length,
+      jobCandidateCount: jobCandidates.length,
+      structuredDataBlockCount: structuredData.length,
+      elapsedMs: Math.round(performance.now() - startedAt),
+    },
+  };
+
+  // Build the compact payload that will be sent to the backend.
+  const selected = rawCapture.jobCandidates[0] || null;
+
+  const candidates = rawCapture.jobCandidates
+    .slice(0, 5)
+    .map((candidate, index) => ({
+      rank: index + 1,
+      score: candidate.score,
+      heading: candidate.heading,
+      tag: candidate.tag,
+      role: candidate.role,
+      selector: candidate.selector,
+      matchedSignals: candidate.matchedSignals,
+      text: compactText(
+        candidate.text,
+        index === 0 ? 10000 : 1200,
+      ),
+    }));
+
+  const jobPostingData = extractJobPostingData(
+    rawCapture.structuredData,
+  );
+
+  const selectedText = selected
+    ? compactText(selected.text, 10000)
+    : null;
+
+  const compactCapture = {
+    schemaVersion: 2,
+    purpose: "GPT-ready job-page diagnostic input",
+    page: {
+      url: rawCapture.url,
+      title: rawCapture.pageTitle,
+      hostname: rawCapture.urlHostname,
+      pathname: rawCapture.urlPathname,
+    },
+    selectedJobCandidate: selected
+      ? {
+          score: selected.score,
+          heading: selected.heading,
+          tag: selected.tag,
+          role: selected.role,
+          selector: selected.selector,
+          matchedSignals: selected.matchedSignals,
+          text: selectedText,
+        }
+      : null,
+    alternativeCandidates: candidates.slice(1),
+    headings: rawCapture.headings.slice(0, 80),
+    jobPostingStructuredData: jobPostingData,
+    pageSignals: {
+      bodyTextLength: rawCapture.stats.visibleTextCharacters,
+      candidateCount: rawCapture.stats.jobCandidateCount,
+      structuredDataBlockCount:
+        rawCapture.stats.structuredDataBlockCount,
+    },
+  };
+
+  compactCapture.stats = {
+    gptInputCharacters: JSON.stringify(compactCapture).length,
+    selectedCandidateCharacters: selectedText?.length || 0,
+  };
+
+  console.log("Captured page data:", compactCapture);
+
+  return compactCapture;
 }
+// function capturePage() {
+//   const structuredData = [...document.querySelectorAll('script[type="application/ld+json"]')].flatMap((node) => {
+//     try { return [JSON.parse(node.textContent || '')]; } catch { return []; }
+//   });
+//   const selection = window.getSelection()?.toString().trim();
+//   const main = document.querySelector('main, [role="main"], article');
+//   const pageText = (main?.innerText || document.body.innerText || '').slice(0, 100000);
+//   return { url: location.href, pageTitle: document.title, selectedText: selection || undefined, pageText, structuredData };
+// }
 
 function selectedSourceId() {
   return document.getElementById('source-select').value || undefined;
@@ -165,7 +695,7 @@ async function init() {
   document.getElementById('content').hidden = false;
   document.getElementById('title').textContent = captured?.pageTitle || 'Current page';
   document.getElementById('url').textContent = captured?.url || '';
-
+  console.log('Captured page data:', captured);
   try {
     await loadSources();
     analysis = await api('/api/browser-companion/analyze-page', { method: 'POST', body: JSON.stringify(captured) });
@@ -195,12 +725,30 @@ async function init() {
 async function compareCv() {
   const cvVersionId = selectedCvVersionId();
   if (!cvVersionId || !captured) return;
+  console.log('captured is ', captured);
   setMessage('Comparing this page with your CV…');
+
+  const [tab] = await ext.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (!tab?.id) {
+      throw new Error("Could not identify the active browser tab.");
+    }
+
+    if (!/^https?:\/\//i.test(tab.url || "")) {
+      throw new Error(
+        "This page cannot be inspected. Open a normal HTTP or HTTPS page.",
+      );
+    }
+    
   try {
     const result = await api('/api/browser-companion/compare-page', {
       method: 'POST',
       body: JSON.stringify({ ...captured, cvVersionId }),
     });
+
     renderMatch(result.match);
     setMessage(result.match ? 'CV comparison complete. “Not evidenced” means the CV does not show it; it does not automatically mean you lack it.' : 'This page could not be compared as a job.');
   } catch (error) {
