@@ -135,11 +135,11 @@ Set `WEB_SEARCH_API_KEY`. Search-only sources and the Tools page then use the co
 
 ### AI intelligence
 
-Set `AI_API_KEY`. The core system does not require AI. `AI_DEDUP_ENABLED=false` is the safe default.
+Set `AI_API_KEY` to a Google Gemini API key. The model defaults to `gemini-2.5-flash` and can be changed with `AI_MODEL`. The core system does not require AI. `AI_DEDUP_ENABLED=false` is the safe default.
 
 ### CV intelligence
 
-CV comparison works deterministically even when AI is disabled. When `AI_API_KEY` is configured, AI can improve requirement extraction and suggest truthful rewrites, but the system still requires user confirmation before adding qualifications or experience that are not evidenced in the selected CV. PDF and DOCX uploads use `pdf-parse` and `mammoth`; generated PDF/DOCX downloads are produced locally by the application.
+CV comparison works deterministically even when AI is disabled. When `AI_API_KEY` is configured, Gemini can improve requirement extraction and suggest truthful rewrites, but the system still requires user confirmation before adding qualifications or experience that are not evidenced in the selected CV. PDF and DOCX uploads use `pdf-parse` and `mammoth`; generated PDF/DOCX downloads are produced locally by the application.
 
 ## Mermaid documentation
 
@@ -197,7 +197,6 @@ The user-provided UI is now the live application shell:
 10. **Settings** — search profiles and workspace preferences.
 
 The complete mapping is documented in `docs/milestones/milestone-19/README.md`.
-
 
 ## v1.9 — Job Source architecture
 
@@ -278,7 +277,6 @@ See:
 ## v1.5 uploaded UI integration
 
 The web application now uses the user-provided Job Intelligence Platform UI as its presentation baseline. The existing v1.4 backend, ingestion, deduplication, application tracking, CV intelligence and browser-companion logic remain the functional baseline. See `docs/milestones/milestone-18/README.md` and `docs/ui-uploaded-reference-study.md`.
-
 
 ## v1.6 live uploaded UI
 

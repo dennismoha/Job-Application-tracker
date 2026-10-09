@@ -8,7 +8,10 @@ const environmentSchema = z.object({
   DATABASE_URL: z.string().min(1),
   CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
-  SCHEDULER_ENABLED: z.string().default('false').transform((value) => value === 'true'),
+  SCHEDULER_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
   SCHEDULER_TICK_MS: z.coerce.number().int().min(1000).default(60000),
   WORKER_TICK_MS: z.coerce.number().int().min(500).default(2000),
   WORKER_ID: z.string().min(1).default('local-worker'),
@@ -17,10 +20,11 @@ const environmentSchema = z.object({
   WEB_SEARCH_API_KEY: z.string().min(1).optional(),
   WEB_SEARCH_ENDPOINT: z.string().url().default('https://google.serper.dev/search'),
   AI_API_KEY: z.string().min(1).optional(),
-  AI_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
-  AI_MODEL: z.string().min(1).default('gpt-5.6-luna'),
-  AI_PROVIDER: z.string().min(1).default('openai'),
-  AI_DEDUP_ENABLED: z.string().default('false').transform((value) => value === 'true'),
+  AI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+  AI_DEDUP_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
   API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60000),
   API_RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(240),
   CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
