@@ -588,16 +588,17 @@ function renderSources() {
 }
 
 async function loadSources() {
-  if (!captured?.url) return;
-  sourceContext = await api(`/api/browser-companion/sources?url=${encodeURIComponent(captured.url)}`);
+  if (!captured?.page?.url) return;
+  sourceContext = await api(`/api/browser-companion/sources?url=${encodeURIComponent(captured.page.url)}`);
+  console.log('Loaded source context:', sourceContext);
   renderSources();
 }
 
 async function createSource() {
   const name = document.getElementById('source-name').value.trim();
-  if (!name || !captured?.url) return setMessage('Enter a Job Source name first.');
-  let baseUrl = captured.url;
-  try { const url = new URL(captured.url); baseUrl = `${url.protocol}//${url.host}`; } catch {}
+  if (!name || !captured?.page?.url) return setMessage('Enter a Job Source name first.');
+  let baseUrl = captured?.page?.url;
+  try { const url = new URL(captured?.page?.url); baseUrl = `${url.protocol}//${url.host}`; } catch {}
   setMessage('Creating Job Source…');
   try {
     const result = await api('/api/browser-companion/sources', {
@@ -694,18 +695,19 @@ async function init() {
   document.getElementById('loading').hidden = true;
   document.getElementById('content').hidden = false;
   document.getElementById('title').textContent = captured?.pageTitle || 'Current page';
-  document.getElementById('url').textContent = captured?.url || '';
+  document.getElementById('url').textContent = captured?.page?.url || '';
   console.log('Captured page data:', captured);
   try {
     await loadSources();
     analysis = await api('/api/browser-companion/analyze-page', { method: 'POST', body: JSON.stringify(captured) });
+    console.log('analysis result:', analysis);
     renderAnalysis();
     if (analysis.isJob) {
       const cvResponse = await api('/api/browser-companion/cvs');
       cvs = cvResponse.cvs ?? [];
       renderCvs();
     }
-    const context = await api(`/api/browser-companion/context?url=${encodeURIComponent(captured.url)}`);
+    const context = await api(`/api/browser-companion/context?url=${encodeURIComponent(captured.page.url)}`);
     existingContext = context;
     if (context.found) {
       const existing = document.getElementById('existing');
@@ -759,7 +761,7 @@ async function compareCv() {
 async function save(action, includeCv = false) {
   setMessage('Checking this URL…');
   try {
-    const context = await api(`/api/browser-companion/context?url=${encodeURIComponent(captured.url)}`);
+    const context = await api(`/api/browser-companion/context?url=${encodeURIComponent(captured?.page?.url)}`);
     existingContext = context;
     if (context.found && (action === 'SAVE' || context.application)) {
       setMessage(context.application ? `Already tracked · ${context.application.stage.replaceAll('_', ' ')}` : `This URL is already saved as ${context.title}.`);
