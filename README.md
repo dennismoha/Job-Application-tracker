@@ -135,7 +135,7 @@ Set `WEB_SEARCH_API_KEY`. Search-only sources and the Tools page then use the co
 
 ### AI intelligence
 
-Set `AI_API_KEY` to a Google Gemini API key. The model defaults to `gemini-2.5-flash` and can be changed with `AI_MODEL`. The core system does not require AI. `AI_DEDUP_ENABLED=false` is the safe default.
+Set `AI_API_KEY` to a Google Gemini API key. The model defaults to `gemini-2.5-flash` and can be changed with `AI_MODEL`. Browser companion page analysis posts its compact capture to `N8N_JOB_ANALYSIS_WEBHOOK_URL`, which defaults to the n8n test webhook; set it to another webhook URL when needed. Other Gemini-backed features continue to use `AI_API_KEY`. The core system does not require AI. `AI_DEDUP_ENABLED=false` is the safe default.
 
 ### CV intelligence
 

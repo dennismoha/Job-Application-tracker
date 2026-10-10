@@ -16,6 +16,7 @@ import { hashSessionToken } from '../../shared/security/session-token.js';
 import { assertSavableUrl, normalizeJobUrl } from '../../shared/urls/url-integrity.js';
 import { applicationService } from '../applications/application.service.js';
 import { aiClient } from '../ai/ai-client.js';
+import { aiClient as n8nAiClient } from '../ai/n8n.js';
 import type { RawJobListing } from '../acquisition/collectors/collector.types.js';
 import { jobIngestionService } from '../ingestion/ingestion.service.js';
 import { cvService } from '../cvs/cv.service.js';
@@ -133,6 +134,37 @@ function analysisFromAiExtraction(capture: CompactBrowserCapture, extraction: Ai
         }
       : null,
   };
+}
+
+async function analyzeCompactCaptureWithN8nAi(userId: string, capture: CompactBrowserCapture) {
+  const result = await n8nAiClient.generateJson<unknown>({
+    task: AiTaskType.BROWSER_PAGE_ANALYSIS,
+    userId,
+    system: [
+      'Evaluate this compact browser capture and extract the actual current job listing.',
+      'Classify pageType as JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, or UNKNOWN.',
+      'Use JOB_DETAIL only when one specific job is clearly represented with a title and meaningful job-specific content.',
+      'If multiple listings are present without a clearly selected job, use MULTIPLE_JOBS; never choose the first listing or merge unrelated jobs.',
+      'Prioritize the selected job candidate, then valid JobPosting structured data, then job-specific headings and text.',
+      'Do not treat company About, mission, navigation, footer, recommendations, or similar jobs as job requirements.',
+      'Extract only facts present in the capture. Use empty strings and arrays for missing fields; never invent details.',
+      'Return exactly one JSON object with these exact keys and JSON types: pageType:string enum; title:string; company:string; location:string; remote:boolean; workMode:string; employmentType:string; salaryMin:number or null; salaryMax:number or null; salaryCurrency:string; salaryPeriod:string; salaryRaw:string; postedDate:string; applicationMethod:string; responsibilities:string[]; qualifications:string[]; skills:string[]; education:string[]; benefits:string[]; description:string; extractionNotes:string[].',
+      'For missing scalar strings return "", for missing salaryMin/salaryMax return null, for missing remote return false, and for missing lists return []. Never return null for string or list fields. Never return a single string where a list is required.',
+      'Use only these exact pageType values: JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, UNKNOWN.',
+      'Output shape example: {"pageType":"UNKNOWN","title":"","company":"","location":"","remote":false,"workMode":"","employmentType":"","salaryMin":null,"salaryMax":null,"salaryCurrency":"","salaryPeriod":"","salaryRaw":"","postedDate":"","applicationMethod":"","responsibilities":[],"qualifications":[],"skills":[],"education":[],"benefits":[],"description":"","extractionNotes":[]}.',
+      'Keep description limited to job-specific role content. Put requirements, responsibilities, qualifications, skills, education, and benefits in their corresponding fields.',
+    ].join(' '),
+    payload: capture,
+  });
+  const parsedResult = aiPageExtractionSchema.safeParse(result);
+  if (!parsedResult.success) {
+    const details = parsedResult.error.issues
+      .map((issue) => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`N8N extraction response validation failed: ${details}`);
+  }
+  const extraction = parsedResult.data;
+  return analysisFromAiExtraction(capture, extraction);
 }
 
 async function analyzeCompactCaptureWithAi(userId: string, capture: CompactBrowserCapture) {
@@ -416,6 +448,7 @@ export const browserCompanionService = {
 
   async analyzePage(userId: string, capture: CompactBrowserCapture) {
     const [analysis, resolution] = await Promise.all([
+      // analyzeCompactCaptureWithN8nAi(userId, capture),
       analyzeCompactCaptureWithAi(userId, capture),
       sourceService.resolveByUrl(capture.page.url),
     ]);

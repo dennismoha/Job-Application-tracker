@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getVersion, configured, generateJson, resolveByUrl } = vi.hoisted(() => ({
+const { getVersion, configured, generateJson, n8nGenerateJson, resolveByUrl } = vi.hoisted(() => ({
   getVersion: vi.fn(),
   configured: vi.fn(() => false),
   generateJson: vi.fn(),
+  n8nGenerateJson: vi.fn(),
   resolveByUrl: vi.fn(),
 }));
 
@@ -13,6 +14,10 @@ vi.mock('../cvs/cv.service.js', () => ({
 
 vi.mock('../ai/ai-client.js', () => ({
   aiClient: { configured, generateJson },
+}));
+
+vi.mock('../ai/n8n.js', () => ({
+  aiClient: { configured: vi.fn(() => true), generateJson: n8nGenerateJson },
 }));
 
 vi.mock('../sources/source.service.js', () => ({
@@ -107,7 +112,7 @@ describe('browserCompanionService.analyzePage', () => {
       source: { id: 'source-1', name: 'Example', sourceType: 'COMPANY_CAREERS' },
       matched: true,
     });
-    generateJson.mockResolvedValue({
+    n8nGenerateJson.mockResolvedValue({
       pageType: 'JOB_DETAIL',
       title: 'Platform Engineer',
       company: 'Example Ltd',
@@ -126,7 +131,7 @@ describe('browserCompanionService.analyzePage', () => {
     });
   });
 
-  it('sends the compact capture to AI and returns the extracted job with source resolution', async () => {
+  it('sends the compact capture to n8n and returns the extracted job with source resolution', async () => {
     const capture = {
       schemaVersion: 2 as const,
       purpose: 'GPT-ready job-page diagnostic input',
@@ -161,7 +166,7 @@ describe('browserCompanionService.analyzePage', () => {
 
     const result = await browserCompanionService.analyzePage('user-1', capture);
 
-    expect(generateJson).toHaveBeenCalledWith(
+    expect(n8nGenerateJson).toHaveBeenCalledWith(
       expect.objectContaining({
         task: 'BROWSER_PAGE_ANALYSIS',
         userId: 'user-1',
@@ -169,6 +174,7 @@ describe('browserCompanionService.analyzePage', () => {
       }),
     );
     expect(resolveByUrl).toHaveBeenCalledWith(capture.page.url);
+    expect(generateJson).not.toHaveBeenCalled();
     expect(result.isJob).toBe(true);
     expect(result.extracted?.description).toContain('Requirements');
     expect(result.detectedSource).toEqual({
@@ -178,8 +184,8 @@ describe('browserCompanionService.analyzePage', () => {
     });
   });
 
-  it('normalizes null optional fields in a valid Gemini extraction result', async () => {
-    generateJson.mockResolvedValue({
+  it('normalizes null optional fields in a valid n8n extraction result', async () => {
+    n8nGenerateJson.mockResolvedValue({
       pageType: 'JOB_DETAIL',
       title: 'Platform Engineer',
       company: null,
