@@ -762,6 +762,7 @@ async function save(action, includeCv = false) {
   setMessage('Checking this URL…');
   try {
     const context = await api(`/api/browser-companion/context?url=${encodeURIComponent(captured?.page?.url)}`);
+    console.log('context result:', context);
     existingContext = context;
     if (context.found && (action === 'SAVE' || context.application)) {
       setMessage(context.application ? `Already tracked · ${context.application.stage.replaceAll('_', ' ')}` : `This URL is already saved as ${context.title}.`);

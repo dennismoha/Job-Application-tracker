@@ -119,6 +119,8 @@ export const browserCompanionController = {
     }
   },
   async context(req: Request, res: Response, next: NextFunction): Promise<void> {
+    console.log('==============> context called with query:', req.query);
+
     try {
       res
         .status(200)
@@ -129,6 +131,7 @@ export const browserCompanionController = {
           ),
         );
     } catch (error) {
+      console.error('Error in context:', error);
       next(error);
     }
   },
