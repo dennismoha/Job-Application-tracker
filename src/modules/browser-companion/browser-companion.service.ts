@@ -448,8 +448,8 @@ export const browserCompanionService = {
 
   async analyzePage(userId: string, capture: CompactBrowserCapture) {
     const [analysis, resolution] = await Promise.all([
-      // analyzeCompactCaptureWithN8nAi(userId, capture),
-      analyzeCompactCaptureWithAi(userId, capture),
+      analyzeCompactCaptureWithN8nAi(userId, capture),
+      // analyzeCompactCaptureWithAi(userId, capture),
       sourceService.resolveByUrl(capture.page.url),
     ]);
     return {
