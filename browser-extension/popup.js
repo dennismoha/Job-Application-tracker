@@ -771,10 +771,16 @@ async function save(action, includeCv = false) {
     setMessage('Saving…');
     const note = document.getElementById('note').value.trim();
     const cvVersionId = includeCv ? selectedCvVersionId() : undefined;
+    console.log(' the current structure of captured is ', captured);
     const result = await api('/api/browser-companion/capture', {
       method: 'POST',
       body: JSON.stringify({
         ...captured,
+        url: captured?.page?.url,
+        pageTitle: captured?.page?.pageTitle,
+        selectedText: '',
+        pageText: JSON.stringify(analysis),
+        structuredData: null,
         action,
         ...(note ? { note } : {}),
         ...(cvVersionId ? { cvVersionId } : {}),
@@ -838,3 +844,4 @@ document.getElementById('cv-select').addEventListener('change', () => renderMatc
 document.getElementById('toggle-source-form').addEventListener('click', () => { const form = document.getElementById('source-form'); form.hidden = !form.hidden; });
 document.getElementById('create-source').addEventListener('click', createSource);
 void init();
+

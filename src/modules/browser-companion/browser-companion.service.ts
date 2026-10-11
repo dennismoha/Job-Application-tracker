@@ -625,7 +625,11 @@ export const browserCompanionService = {
     const analysis = await analyzePageWithFallback(userId, input);
     const detected = analysis.extracted;
     const title = detected?.title ?? stringValue(posting?.title) ?? cleanPageTitle(input.pageTitle);
-
+    console.log('=++++++++++++>>>>>>>>>>>>=Detected title:', title, 'from', {
+      detected,
+      posting,
+      input,
+    });
     if (!title) {
       throw new BadRequestError(
         'A job title could not be identified. Select the job title or enter it in the extension before saving.',
