@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import {
   AcquisitionMethod,
   AiTaskType,
+  CvMatchStatus,
   ExtractionMethod,
   JobVisibility,
   UserJobDisposition,
@@ -63,6 +64,21 @@ const aiPageExtractionSchema = z.object({
   description: aiStringSchema,
   extractionNotes: aiStringArraySchema,
 });
+
+const aiComparisonSchema = z.object({
+  matchScore: z.number().optional(),
+  verdict: z.string().optional(),
+  summary: z.string().optional(),
+  matchedRequirements: z.array(z.object({
+    requirement: z.string(),
+    evidence: aiStringSchema,
+  })).optional(),
+  missingRequirements: z.array(z.object({
+    requirement: z.string(),
+    importance: aiStringSchema,
+    suggestion: aiStringSchema,
+  })).optional(),
+}).passthrough();
 
 type AiPageExtraction = z.infer<typeof aiPageExtractionSchema>;
 
@@ -159,17 +175,27 @@ async function analyzeCompactCaptureWithN8nAi(
       'Prioritize the selected job candidate, then valid JobPosting structured data, then job-specific headings and text.',
       'Do not treat company About, mission, navigation, footer, recommendations, or similar jobs as job requirements.',
       'Extract only facts present in the capture. Use empty strings and arrays for missing fields; never invent details.',
-      'Return exactly one JSON object with these exact keys and JSON types: pageType:string enum; title:string; company:string; location:string; remote:boolean; workMode:string; employmentType:string; salaryMin:number or null; salaryMax:number or null; salaryCurrency:string; salaryPeriod:string; salaryRaw:string; postedDate:string; applicationMethod:string; responsibilities:string[]; qualifications:string[]; skills:string[]; education:string[]; benefits:string[]; description:string; extractionNotes:string[].',
+      mode === 'both'
+        ? 'For both mode, return one JSON object with top-level job and comparison keys. Put the extraction fields under job. Put the CV analysis under comparison, including matchScore, verdict, summary, matchedRequirements (requirement and evidence), and missingRequirements (requirement, importance, and suggestion).'
+        : 'For extract mode, return one JSON object with these exact keys and JSON types: pageType:string enum; title:string; company:string; location:string; remote:boolean; workMode:string; employmentType:string; salaryMin:number or null; salaryMax:number or null; salaryCurrency:string; salaryPeriod:string; salaryRaw:string; postedDate:string; applicationMethod:string; responsibilities:string[]; qualifications:string[]; skills:string[]; education:string[]; benefits:string[]; description:string; extractionNotes:string[].',
       'For missing scalar strings return "", for missing salaryMin/salaryMax return null, for missing remote return false, and for missing lists return []. Never return null for string or list fields. Never return a single string where a list is required.',
       'Use only these exact pageType values: JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, UNKNOWN.',
-      'Output shape example: {"pageType":"UNKNOWN","title":"","company":"","location":"","remote":false,"workMode":"","employmentType":"","salaryMin":null,"salaryMax":null,"salaryCurrency":"","salaryPeriod":"","salaryRaw":"","postedDate":"","applicationMethod":"","responsibilities":[],"qualifications":[],"skills":[],"education":[],"benefits":[],"description":"","extractionNotes":[]}.',
+      mode === 'both'
+        ? 'Both-mode output shape example: {"job":{"pageType":"JOB_DETAIL","title":"...","company":"...","location":"...","remote":false,"workMode":"","employmentType":"","salaryMin":null,"salaryMax":null,"salaryCurrency":"","salaryPeriod":"","salaryRaw":"","postedDate":"","applicationMethod":"","responsibilities":[],"qualifications":[],"skills":[],"education":[],"benefits":[],"description":"...","extractionNotes":[]},"comparison":{"matchScore":0,"verdict":"...","summary":"...","matchedRequirements":[],"missingRequirements":[]}}.'
+        : 'Extract-mode output shape example: {"pageType":"UNKNOWN","title":"","company":"","location":"","remote":false,"workMode":"","employmentType":"","salaryMin":null,"salaryMax":null,"salaryCurrency":"","salaryPeriod":"","salaryRaw":"","postedDate":"","applicationMethod":"","responsibilities":[],"qualifications":[],"skills":[],"education":[],"benefits":[],"description":"","extractionNotes":[]}.',
       'Keep description limited to job-specific role content. Put requirements, responsibilities, qualifications, skills, education, and benefits in their corresponding fields.',
     ].join(' '),
     payload: capture,
     mode,
     ...(cvText !== undefined ? { cvText } : {}),
   });
-  const parsedResult = aiPageExtractionSchema.safeParse(result);
+  const response = result && typeof result === 'object' && !Array.isArray(result)
+    ? result as Record<string, unknown>
+    : {};
+  const extractionPayload = response.job && typeof response.job === 'object'
+    ? response.job
+    : result;
+  const parsedResult = aiPageExtractionSchema.safeParse(extractionPayload);
   if (!parsedResult.success) {
     const details = parsedResult.error.issues
       .map((issue) => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
@@ -177,7 +203,12 @@ async function analyzeCompactCaptureWithN8nAi(
     throw new Error(`N8N extraction response validation failed: ${details}`);
   }
   const extraction = parsedResult.data;
-  return analysisFromAiExtraction(capture, extraction);
+  const analysis = analysisFromAiExtraction(capture, extraction);
+  const comparison = mode === 'both' ? aiComparisonSchema.safeParse(response.comparison) : null;
+  return {
+    ...analysis,
+    ...(comparison?.success ? { aiComparison: comparison.data } : {}),
+  };
 }
 
 async function analyzeCompactCaptureWithAi(userId: string, capture: CompactBrowserCapture) {
@@ -538,54 +569,14 @@ export const browserCompanionService = {
   async comparePage(
     userId: string,
     input: {
-      url: string;
-      pageTitle?: string;
-      selectedText?: string;
-      pageText?: string;
-      structuredData?: unknown;
+      capture: CompactBrowserCapture;
       cvVersionId: string;
     },
   ) {
     const version = await cvService.getVersion(userId, input.cvVersionId);
-    const pageUrl = new URL(input.url);
-    const pageText = [input.selectedText, input.pageText].filter(Boolean).join('\n\n');
-    const capture: CompactBrowserCapture = {
-      schemaVersion: 2,
-      purpose: 'Analyze this browser page for a job listing.',
-      page: {
-        url: input.url,
-        title: input.pageTitle ?? '',
-        hostname: pageUrl.hostname,
-        pathname: pageUrl.pathname,
-      },
-      selectedJobCandidate: pageText
-        ? {
-            score: 0,
-            heading: input.pageTitle ?? null,
-            tag: 'BODY',
-            role: null,
-            selector: null,
-            matchedSignals: [],
-            text: pageText.slice(0, 12_000),
-          }
-        : null,
-      alternativeCandidates: [],
-      headings: [],
-      jobPostingStructuredData: input.structuredData == null ? [] : [input.structuredData],
-      pageSignals: {
-        bodyTextLength: pageText.length,
-        candidateCount: pageText ? 1 : 0,
-        structuredDataBlockCount: input.structuredData == null ? 0 : 1,
-      },
-      stats: {
-        gptInputCharacters: pageText.length,
-        selectedCandidateCharacters: pageText.length,
-      },
-    };
-    //const analysis = await analyzeCompactCaptureWithAi(userId, input.capture);
     const analysis = await analyzeCompactCaptureWithN8nAi(
       userId,
-      capture,
+      input.capture,
       'both',
       version.plainText,
     );
@@ -598,7 +589,7 @@ export const browserCompanionService = {
 
     const requirements = extractRequirementsFromDescription(analysis.extracted.description);
 
-    const items = requirements.map((requirement) => ({
+    const localItems = requirements.map((requirement) => ({
       requirementText: requirement.text,
       kind: requirement.kind,
       priority: requirement.priority,
@@ -606,11 +597,37 @@ export const browserCompanionService = {
     }));
 
     const aggregate = scoreRequirementMatches(
-      items.map((item) => ({
+      localItems.map((item) => ({
         status: item.status,
         priority: item.priority,
       })),
     );
+
+    const aiComparison = analysis.aiComparison;
+    const items = aiComparison
+      ? [
+          ...(aiComparison.matchedRequirements ?? []).map((item) => ({
+            requirementText: item.requirement,
+            kind: 'MATCHED',
+            status: CvMatchStatus.EVIDENCED,
+            evidence: item.evidence,
+          })),
+          ...(aiComparison.missingRequirements ?? []).map((item) => ({
+            requirementText: item.requirement,
+            kind: item.importance || 'REQUIRED',
+            status: item.importance.toUpperCase() === 'REQUIRED'
+              ? CvMatchStatus.NEEDS_CONFIRMATION
+              : CvMatchStatus.NOT_EVIDENCED,
+            suggestion: item.suggestion,
+          })),
+        ]
+      : localItems;
+    const counts = {
+      evidenced: items.filter((item) => item.status === CvMatchStatus.EVIDENCED).length,
+      partial: items.filter((item) => item.status === CvMatchStatus.PARTIAL).length,
+      notEvidenced: items.filter((item) => item.status === CvMatchStatus.NOT_EVIDENCED).length,
+      needsConfirmation: items.filter((item) => item.status === CvMatchStatus.NEEDS_CONFIRMATION).length,
+    };
 
     return {
       ...analysis,
@@ -621,11 +638,13 @@ export const browserCompanionService = {
           versionId: version.id,
           versionNumber: version.versionNumber,
         },
-        score: aggregate.score,
-        evidencedCount: aggregate.evidenced,
-        partialCount: aggregate.partial,
-        notEvidencedCount: aggregate.notEvidenced,
-        needsConfirmationCount: aggregate.needsConfirmation,
+        score: aiComparison?.matchScore ?? aggregate.score,
+        verdict: aiComparison?.verdict,
+        summary: aiComparison?.summary,
+        evidencedCount: counts.evidenced,
+        partialCount: counts.partial,
+        notEvidencedCount: counts.notEvidenced,
+        needsConfirmationCount: counts.needsConfirmation,
         items,
       },
     };

@@ -668,13 +668,69 @@ function renderMatch(match) {
   const panel = document.getElementById('match');
   panel.hidden = !match;
   if (!match) return;
-  document.getElementById('match-score').textContent = `${match.score}%`;
-  document.getElementById('match-evidenced').textContent = match.evidencedCount;
-  document.getElementById('match-partial').textContent = match.partialCount;
-  document.getElementById('match-missing').textContent = match.notEvidencedCount;
-  document.getElementById('match-confirm').textContent = match.needsConfirmationCount;
-  const gaps = match.items.filter((item) => !['EVIDENCED', 'NOT_APPLICABLE'].includes(item.status)).slice(0, 4);
-  document.getElementById('match-gaps').innerHTML = gaps.map((item) => `<div><span>${item.status.replaceAll('_', ' ')}</span><p>${escapeHtml(item.requirementText)}</p></div>`).join('');
+  const items = Array.isArray(match.items) ? match.items : [];
+  const total = items.length;
+  document.getElementById('match-cv-name').textContent = match.cv?.name
+    ? `${match.cv.name}${match.cv.versionNumber ? ` · v${match.cv.versionNumber}` : ''}`
+    : 'Selected CV';
+  const verdict = document.getElementById('match-verdict');
+  verdict.textContent = match.verdict ? String(match.verdict).replaceAll('_', ' ') : '';
+  verdict.hidden = !match.verdict;
+  document.getElementById('match-score').textContent = `${match.score ?? 0}%`;
+  document.getElementById('match-evidenced').textContent = match.evidencedCount ?? 0;
+  document.getElementById('match-partial').textContent = match.partialCount ?? 0;
+  document.getElementById('match-missing').textContent = match.notEvidencedCount ?? 0;
+  document.getElementById('match-confirm').textContent = match.needsConfirmationCount ?? 0;
+  document.getElementById('match-requirement-count').textContent = `${total} ${total === 1 ? 'requirement' : 'requirements'}`;
+  document.getElementById('match-summary').textContent = match.summary
+    || (total
+      ? `${match.evidencedCount ?? 0} of ${total} requirements have clear evidence in this CV. Review each finding before deciding what to emphasize.`
+      : 'No job requirements were available to compare with this CV.');
+
+  const findings = document.getElementById('match-gaps');
+  findings.replaceChildren();
+  const statusLabels = {
+    EVIDENCED: 'Evidenced',
+    PARTIAL: 'Partial evidence',
+    NOT_EVIDENCED: 'Not evidenced',
+    NEEDS_CONFIRMATION: 'Confirm',
+    NOT_APPLICABLE: 'Not applicable',
+  };
+  for (const item of items) {
+    const article = document.createElement('article');
+    article.className = `finding finding-${String(item.status ?? '').toLowerCase().replaceAll('_', '-')}`;
+
+    const top = document.createElement('div');
+    top.className = 'finding-top';
+    const status = document.createElement('span');
+    status.className = 'finding-status';
+    status.textContent = statusLabels[item.status] ?? String(item.status ?? 'Review');
+    const meta = document.createElement('span');
+    meta.className = 'finding-meta';
+    meta.textContent = [item.kind, item.priority != null ? `Priority ${item.priority}` : '']
+      .filter(Boolean)
+      .join(' · ');
+    top.append(status, meta);
+
+    const requirement = document.createElement('p');
+    requirement.className = 'finding-requirement';
+    requirement.textContent = item.requirementText ?? '';
+    article.append(top, requirement);
+
+    if (item.evidence) {
+      const evidence = document.createElement('p');
+      evidence.className = 'finding-evidence';
+      evidence.textContent = `CV evidence: “${item.evidence}”`;
+      article.append(evidence);
+    }
+    if (item.suggestion) {
+      const suggestion = document.createElement('p');
+      suggestion.className = 'finding-suggestion';
+      suggestion.textContent = item.suggestion;
+      article.append(suggestion);
+    }
+    findings.append(article);
+  }
 }
 
 function escapeHtml(value) {
@@ -748,11 +804,16 @@ async function compareCv() {
   try {
     const result = await api('/api/browser-companion/compare-page', {
       method: 'POST',
-      body: JSON.stringify({ url: analysis.extracted.url, pageTitle: analysis.extracted.title, selectedText: '', pageText: JSON.stringify(analysis.extracted.description), cvVersionId }),
+      body: JSON.stringify({ capture: captured, cvVersionId }),
     });
 
     renderMatch(result.match);
-    setMessage(result.match ? 'CV comparison complete. “Not evidenced” means the CV does not show it; it does not automatically mean you lack it.' : 'This page could not be compared as a job.');
+    console.log('===> compare result:', result);
+    if (result.match) {
+      setMessage('CV comparison complete. “Not evidenced” means the CV does not show it; it does not automatically mean you lack it.');
+    } else {
+      setMessage(`This page could not be compared as a job (${result.pageType ?? 'no page type'}${result.extracted ? '' : ', no extracted job'}).`);
+    }
   } catch (error) {
     setMessage(error.message);
   }

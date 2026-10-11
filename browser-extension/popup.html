@@ -53,9 +53,15 @@
       </label>
       <button id="compare" class="wide">Compare CV with this job</button>
       <div id="match" class="match" hidden>
-        <div class="match-score"><strong id="match-score"></strong><span>requirements evidenced</span></div>
+        <div class="report-heading">
+          <div><span class="label">CV comparison report</span><strong id="match-cv-name"></strong></div>
+          <div class="report-score"><span id="match-verdict" class="match-verdict"></span><div class="match-score"><strong id="match-score"></strong><span>evidence score</span></div></div>
+        </div>
+        <p id="match-summary" class="report-summary"></p>
         <div class="match-grid"><span><b id="match-evidenced"></b>Evidenced</span><span><b id="match-partial"></b>Partial</span><span><b id="match-missing"></b>Not evidenced</span><span><b id="match-confirm"></b>Confirm</span></div>
+        <div class="report-findings-heading"><strong>Requirement findings</strong><span id="match-requirement-count"></span></div>
         <div id="match-gaps" class="match-gaps"></div>
+        <p class="report-note">“Not evidenced” means this CV does not show the requirement. Confirm facts before adding them.</p>
       </div>
       <div class="cv-actions">
         <button id="save-with-cv">Save job + CV</button>

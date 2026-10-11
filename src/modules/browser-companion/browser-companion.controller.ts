@@ -8,7 +8,7 @@ import {
   analyzeCompactBrowserPageSchema,
   browserContextSchema,
   captureJobSchema,
-  compareBrowserPageSchema,
+  compareCompactBrowserPageSchema,
   createBrowserTokenSchema,
   prepareBrowserCvSchema,
 } from './browser-companion.schemas.js';
@@ -94,17 +94,12 @@ export const browserCompanionController = {
     }
   },
   async comparePage(req: Request, res: Response, next: NextFunction): Promise<void> {
-    console.log('comparePage called with body:', req.body);
-    console.log('comparePage called with query:', compareBrowserPageSchema.parse(req.body));
-    res.json(
-      await browserCompanionService.comparePage(
-        userId(req),
-        compareBrowserPageSchema.parse(req.body),
-      ),
-    );
-
-    // try { res.status(200).json(await browserCompanionService.comparePage(userId(req), compareCompactBrowserPageSchema.parse(req.body))); }
-    // catch (error) { next(error); }
+    try {
+      const input = compareCompactBrowserPageSchema.parse(req.body);
+      res.status(200).json(await browserCompanionService.comparePage(userId(req), input));
+    } catch (error) {
+      next(error);
+    }
   },
   async prepareCv(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
