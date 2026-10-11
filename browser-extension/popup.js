@@ -744,11 +744,11 @@ async function compareCv() {
         "This page cannot be inspected. Open a normal HTTP or HTTPS page.",
       );
     }
-    
+    console.log('analysis structure is ', analysis);
   try {
     const result = await api('/api/browser-companion/compare-page', {
       method: 'POST',
-      body: JSON.stringify({ ...captured, cvVersionId }),
+      body: JSON.stringify({ url: analysis.extracted.url, pageTitle: analysis.extracted.title, selectedText: '', pageText: JSON.stringify(analysis.extracted.description), cvVersionId }),
     });
 
     renderMatch(result.match);

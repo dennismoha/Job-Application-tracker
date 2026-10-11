@@ -136,7 +136,12 @@ function analysisFromAiExtraction(capture: CompactBrowserCapture, extraction: Ai
   };
 }
 
-async function analyzeCompactCaptureWithN8nAi(userId: string, capture: CompactBrowserCapture) {
+async function analyzeCompactCaptureWithN8nAi(
+  userId: string,
+  capture: CompactBrowserCapture,
+  mode: 'extract' | 'both' = 'extract',
+  cvText?: string,
+) {
   const result = await n8nAiClient.generateJson<unknown>({
     task: AiTaskType.BROWSER_PAGE_ANALYSIS,
     userId,
@@ -155,6 +160,8 @@ async function analyzeCompactCaptureWithN8nAi(userId: string, capture: CompactBr
       'Keep description limited to job-specific role content. Put requirements, responsibilities, qualifications, skills, education, and benefits in their corresponding fields.',
     ].join(' '),
     payload: capture,
+    mode,
+    ...(cvText !== undefined ? { cvText } : {}),
   });
   const parsedResult = aiPageExtractionSchema.safeParse(result);
   if (!parsedResult.success) {
@@ -529,16 +536,20 @@ export const browserCompanionService = {
       cvVersionId: string;
     },
   ) {
-    const analysis = await analyzeCompactCaptureWithAi(userId, input.capture);
-
+    const version = await cvService.getVersion(userId, input.cvVersionId);
+    //const analysis = await analyzeCompactCaptureWithAi(userId, input.capture);
+    const analysis = await analyzeCompactCaptureWithN8nAi(
+      userId,
+      input.capture,
+      'both',
+      version.plainText,
+    );
     if (analysis.pageType !== 'JOB_DETAIL' || !analysis.extracted) {
       return {
         ...analysis,
         match: null,
       };
     }
-
-    const version = await cvService.getVersion(userId, input.cvVersionId);
 
     const requirements = extractRequirementsFromDescription(analysis.extracted.description);
 
