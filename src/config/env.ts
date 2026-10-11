@@ -19,10 +19,15 @@ const environmentSchema = z.object({
   N8N_INGESTION_SECRET: z.string().min(16).optional(),
   WEB_SEARCH_API_KEY: z.string().min(1).optional(),
   WEB_SEARCH_ENDPOINT: z.string().url().default('https://google.serper.dev/search'),
+  // N8N_JOB_ANALYSIS_WEBHOOK_URL: z
+  //   .string()
+  //   .url()
+  //   .default('https://job-intel.app.n8n.cloud/webhook-test/job-extract'),
+
   N8N_JOB_ANALYSIS_WEBHOOK_URL: z
     .string()
     .url()
-    .default('https://job-intel.app.n8n.cloud/webhook-test/job-extract'),
+    .default('https://job-intel.app.n8n.cloud/webhook/job-extract'),
   AI_API_KEY: z.string().min(1).optional(),
   AI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
   AI_DEDUP_ENABLED: z

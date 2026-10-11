@@ -142,6 +142,12 @@ async function analyzeCompactCaptureWithN8nAi(
   mode: 'extract' | 'both' = 'extract',
   cvText?: string,
 ) {
+  console.log('=++++++++++++>>>>>>>>>>>>=analyzeCompactCaptureWithN8nAi input:', {
+    userId,
+    capture,
+    mode,
+    cvText,
+  });
   const result = await n8nAiClient.generateJson<unknown>({
     task: AiTaskType.BROWSER_PAGE_ANALYSIS,
     userId,
@@ -532,15 +538,54 @@ export const browserCompanionService = {
   async comparePage(
     userId: string,
     input: {
-      capture: CompactBrowserCapture;
+      url: string;
+      pageTitle?: string;
+      selectedText?: string;
+      pageText?: string;
+      structuredData?: unknown;
       cvVersionId: string;
     },
   ) {
     const version = await cvService.getVersion(userId, input.cvVersionId);
+    const pageUrl = new URL(input.url);
+    const pageText = [input.selectedText, input.pageText].filter(Boolean).join('\n\n');
+    const capture: CompactBrowserCapture = {
+      schemaVersion: 2,
+      purpose: 'Analyze this browser page for a job listing.',
+      page: {
+        url: input.url,
+        title: input.pageTitle ?? '',
+        hostname: pageUrl.hostname,
+        pathname: pageUrl.pathname,
+      },
+      selectedJobCandidate: pageText
+        ? {
+            score: 0,
+            heading: input.pageTitle ?? null,
+            tag: 'BODY',
+            role: null,
+            selector: null,
+            matchedSignals: [],
+            text: pageText.slice(0, 12_000),
+          }
+        : null,
+      alternativeCandidates: [],
+      headings: [],
+      jobPostingStructuredData: input.structuredData == null ? [] : [input.structuredData],
+      pageSignals: {
+        bodyTextLength: pageText.length,
+        candidateCount: pageText ? 1 : 0,
+        structuredDataBlockCount: input.structuredData == null ? 0 : 1,
+      },
+      stats: {
+        gptInputCharacters: pageText.length,
+        selectedCandidateCharacters: pageText.length,
+      },
+    };
     //const analysis = await analyzeCompactCaptureWithAi(userId, input.capture);
     const analysis = await analyzeCompactCaptureWithN8nAi(
       userId,
-      input.capture,
+      capture,
       'both',
       version.plainText,
     );

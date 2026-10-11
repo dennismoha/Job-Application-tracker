@@ -24,6 +24,8 @@ export const aiClient = {
     //   signal: AbortSignal.timeout(60_000),
     // });
 
+    console.log('=++++++++++++>>>>>>>>>>>>=comparePage input:', input);
+
     const response = await fetch(env.N8N_JOB_ANALYSIS_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

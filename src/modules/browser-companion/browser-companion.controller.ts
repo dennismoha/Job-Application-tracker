@@ -85,6 +85,8 @@ export const browserCompanionController = {
         throw new BadRequestError(`Analyze-page request validation failed: ${details}`);
       }
 
+      console.log('analyzePage called with body:', parsed.data);
+
       const data = await browserCompanionService.analyzePage(userId(req), parsed.data);
       res.status(200).json(data);
     } catch (error) {
