@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { api } from '../api/client';
+import type { Page } from '../types/navigation';
 
 interface Notification {
   id: string;
@@ -14,7 +15,7 @@ interface Notification {
   createdAt: string;
 }
 
-export function SmartNotificationsPanel({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function SmartNotificationsPanel({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   async function refresh() {
     const response = await api<{ notifications: Notification[] }>(

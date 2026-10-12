@@ -13,6 +13,7 @@ export type Page =
   | 'crawl-sessions'
   | 'crawl-history'
   | 'crawl-failed'
+  | 'crawl-session-detail'
   | 'search'
   | 'apps-all'
   | 'apps-applied'
@@ -22,5 +23,4 @@ export type Page =
   | 'cvs'
   | 'extension'
   | 'analytics'
-  | 'settings'
-  | 'cv-tailor';
+  | 'settings';

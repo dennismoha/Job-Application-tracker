@@ -20,33 +20,7 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import UniversalSearch from './pages/UniversalSearch';
 import type { SearchProfileSummary } from './types/jobs';
-
-type Page =
-  | 'dashboard'
-  | 'jobs-all'
-  | 'jobs-new'
-  | 'jobs-favorites'
-  | 'jobs-scam'
-  | 'jobs-expired'
-  | 'sites-all'
-  | 'sites-crawlable'
-  | 'sites-restricted'
-  | 'sites-scam'
-  | 'crawl-configs'
-  | 'crawl-sessions'
-  | 'crawl-history'
-  | 'crawl-failed'
-  | 'crawl-session-detail'
-  | 'search'
-  | 'apps-all'
-  | 'apps-applied'
-  | 'apps-interviewing'
-  | 'apps-rejected'
-  | 'apps-offers'
-  | 'cvs'
-  | 'extension'
-  | 'analytics'
-  | 'settings';
+import type { Page } from './types/navigation';
 
 interface User {
   id: string;

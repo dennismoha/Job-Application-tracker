@@ -13,12 +13,13 @@ import type {
   SearchProfileSummary,
   SourceSummary,
 } from '../types/jobs';
+import type { Page } from '../types/navigation';
 
 interface Props {
   filter: 'all' | 'new' | 'favorites' | 'risk' | 'expired';
   activeProfileId?: string;
   onChanged: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: Page) => void;
 }
 
 interface AiAnalysis {
@@ -583,7 +584,7 @@ function JobDetailDrawer({
   activeProfileId?: string;
   onClose: () => void;
   onChanged: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: Page) => void;
 }) {
   const toast = useToast();
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -3090,7 +3091,7 @@ export default function Jobs({ filter, activeProfileId = '', onChanged, onNaviga
                           color: job.remoteType === 'REMOTE' ? '#06d6a0' : '#64748b',
                         }}
                       >
-                        {job.locationText ?? human(job.remoteType)}
+                        {job.locationText ?? human(job.remoteType ?? 'UNKNOWN')}
                       </td>
                       <td
                         className="mono"

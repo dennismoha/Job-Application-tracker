@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { EmptyState } from '../components/UI';
 import { useToast } from '../components/Toast';
 import type { SearchProfileSummary, SourceSummary } from '../types/jobs';
+import type { Page } from '../types/navigation';
 
 interface SearchResult {
   title?: string;
@@ -77,7 +78,7 @@ export default function UniversalSearch({
 }: {
   activeProfileId: string;
   profiles: SearchProfileSummary[];
-  onNavigate: (page: string) => void;
+  onNavigate: (page: Page) => void;
 }) {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('web');

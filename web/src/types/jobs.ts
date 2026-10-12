@@ -31,10 +31,12 @@ export interface UserJobState {
   preferredCvVersionId?: string | null;
 }
 
-export interface JobSummary {
+export interface JobSummary { 
   id: string;
   title: string;
   locationText?: string | null;
+  remoteType?: string;
+  salaryText?: string | null;
   country?: string | null;
   status: string;
   freshnessStatus: string;

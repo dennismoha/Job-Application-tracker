@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import { SmartNotificationsPanel } from '../components/SmartNotificationsPanel';
 import type { JobSummary } from '../types/jobs';
+import type { Page } from '../types/navigation';
 
 interface Props {
   activeProfileId?: string;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: Page) => void;
 }
 interface Overview {
   jobs: number;
@@ -255,7 +256,7 @@ export default function Dashboard({ activeProfileId = '', onNavigate }: Props) {
         ].map(([label, value, detail, page, color]) => (
           <button
             key={String(label)}
-            onClick={() => onNavigate(String(page))}
+            onClick={() => onNavigate(String(page) as Page)}
             style={{
               textAlign: 'left',
               padding: '9px 11px',

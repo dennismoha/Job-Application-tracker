@@ -4,12 +4,13 @@ import { api } from '../api/client';
 import { SiteWorkspacePanel } from '../components/SiteWorkspacePanel';
 import { useToast } from '../components/Toast';
 import type { SearchProfileSummary } from '../types/jobs';
+import type { Page } from '../types/navigation';
 
 interface Props {
   filter: 'all' | 'crawlable' | 'restricted' | 'risk';
   activeProfileId?: string;
   profiles: SearchProfileSummary[];
-  onNavigate: (page: string) => void;
+  onNavigate: (page: Page) => void;
   onChanged: () => void;
 }
 interface Source {
