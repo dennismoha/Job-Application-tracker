@@ -1,12 +1,18 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { createSourceBatchSchema, updateSourceBatchSchema } from './source-batch.schemas.js';
 import { sourceBatchService } from './source-batch.service.js';
 
 function userId(req: Request): string {
   if (!req.currentUser) throw new UnauthorizedError();
   return req.currentUser.id;
+}
+
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) throw new BadRequestError(`Route parameter "${name}" is required.`);
+  return value;
 }
 
 export const sourceBatchController = {
@@ -22,13 +28,13 @@ export const sourceBatchController = {
   async update(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateSourceBatchSchema.parse(req.body);
-      res.status(200).json({ batch: await sourceBatchService.update(userId(req), req.params.batchId, input) });
+      res.status(200).json({ batch: await sourceBatchService.update(userId(req), routeParam(req, 'batchId'), input) });
     } catch (error) { next(error); }
   },
   async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { await sourceBatchService.remove(userId(req), req.params.batchId); res.status(204).end(); } catch (error) { next(error); }
+    try { await sourceBatchService.remove(userId(req), routeParam(req, 'batchId')); res.status(204).end(); } catch (error) { next(error); }
   },
   async run(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { res.status(202).json(await sourceBatchService.run(userId(req), req.params.batchId)); } catch (error) { next(error); }
+    try { res.status(202).json(await sourceBatchService.run(userId(req), routeParam(req, 'batchId'))); } catch (error) { next(error); }
   },
 };

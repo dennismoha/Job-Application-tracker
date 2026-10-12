@@ -170,7 +170,7 @@ async function createListing(
   const source = await prisma.source.findUnique({ where: { id: candidate.sourceId } });
   if (!source) throw new NotFoundError('Source not found while persisting the listing.');
 
-  const official = [SourceType.COMPANY_CAREERS, SourceType.ATS].includes(source.sourceType);
+  const official = source.sourceType === SourceType.COMPANY_CAREERS || source.sourceType === SourceType.ATS;
   const listing = await prisma.jobListing.create({
     data: {
       jobId,
@@ -285,9 +285,9 @@ export const deduplicationService = {
       .filter(({ match }) => !match.hardConflict)
       .sort((left, right) => right.match.score - left.match.score)[0];
 
-    let method = DeduplicationMethod.FUZZY_MATCH;
+    let method: DeduplicationMethod = DeduplicationMethod.FUZZY_MATCH;
     let confidence = selected ? selected.match.score / 100 : 0;
-    let decision = DeduplicationDecision.UNCERTAIN;
+    let decision: DeduplicationDecision = DeduplicationDecision.UNCERTAIN;
 
     if (selected && candidate.applyUrl && selected.job.listings.some((listing) => listing.applyUrl === candidate.applyUrl)) {
       method = DeduplicationMethod.APPLY_URL;

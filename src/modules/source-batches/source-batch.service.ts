@@ -67,7 +67,9 @@ export const sourceBatchService = {
 
     for (const item of batch.items.filter((candidate) => candidate.enabled)) {
       const source = item.source;
-      if ([CollectionCapability.EMAIL_ONLY, CollectionCapability.RESTRICTED, CollectionCapability.DISABLED].includes(source.collectionCapability)) {
+      if (source.collectionCapability === CollectionCapability.EMAIL_ONLY
+        || source.collectionCapability === CollectionCapability.RESTRICTED
+        || source.collectionCapability === CollectionCapability.DISABLED) {
         continue;
       }
 

@@ -5,9 +5,9 @@ import { prisma } from '../../shared/prisma/prisma-client.js';
 import type { RawJobListing } from '../acquisition/collectors/collector.types.js';
 import { jobIngestionService } from '../ingestion/ingestion.service.js';
 import { sourceService } from '../sources/source.service.js';
-import { webSearchProvider } from './web-search.provider.js';
+import { webSearchProvider, type WebSearchResult } from './web-search.provider.js';
 
-function looksLikeJobResult(result: { title: string; link: string; snippet?: string }): boolean {
+function looksLikeJobResult(result: WebSearchResult): boolean {
   const value = `${result.title} ${result.link} ${result.snippet ?? ''}`.toLowerCase();
   return /\b(job|jobs|career|careers|vacancy|vacancies|position|teacher|engineer|developer|apply)\b/.test(value);
 }

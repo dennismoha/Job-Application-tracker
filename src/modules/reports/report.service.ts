@@ -31,7 +31,7 @@ function dateRange(from: Date, to: Date): Prisma.DateTimeFilter {
   return { gte: from, lte: to };
 }
 
-const responseTypes = [
+const responseTypes: ApplicationEventType[] = [
   ApplicationEventType.RESPONSE_RECEIVED,
   ApplicationEventType.SCREENING,
   ApplicationEventType.INTERVIEW_SCHEDULED,
@@ -42,7 +42,7 @@ const responseTypes = [
   ApplicationEventType.REJECTED,
 ];
 
-const interviewTypes = [
+const interviewTypes: ApplicationEventType[] = [
   ApplicationEventType.INTERVIEW_ATTENDED,
   ApplicationEventType.SECOND_INTERVIEW,
   ApplicationEventType.FINAL_INTERVIEW,
@@ -373,7 +373,7 @@ export const reportService = {
     }
     return {
       total: reports.length,
-      highRisk: reports.filter((report) => [RiskLevel.ORANGE, RiskLevel.RED].includes(report.level)).length,
+      highRisk: reports.filter((report) => report.level === RiskLevel.ORANGE || report.level === RiskLevel.RED).length,
       byReason: Object.fromEntries(byReason),
       byLevel: Object.fromEntries(byLevel),
       reports: reports.slice(0, 100),
@@ -473,7 +473,7 @@ export const reportService = {
       if (appliedId) { const row = sourceMap.get(appliedId); if (row) row.appliedVia += 1; }
     }
 
-    const highRiskReports = riskReports.filter((report) => [RiskLevel.ORANGE, RiskLevel.RED].includes(report.level));
+    const highRiskReports = riskReports.filter((report) => report.level === RiskLevel.ORANGE || report.level === RiskLevel.RED);
     for (const report of highRiskReports) {
       if (!report.sourceId || !report.jobId) continue;
       sourceMap.get(report.sourceId)?.scamJobs.add(report.jobId);

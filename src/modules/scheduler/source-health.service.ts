@@ -75,7 +75,7 @@ export const sourceHealthService = {
     const pausedUntil = new Date(now.getTime() + pauseMinutes * 60_000);
     const shouldOpenCircuit = challenge || failures >= 3;
 
-    let healthStatus = SourceHealthStatus.DEGRADED;
+    let healthStatus: SourceHealthStatus = SourceHealthStatus.DEGRADED;
     if (challenge) healthStatus = SourceHealthStatus.CHALLENGED;
     if (failures >= 5) healthStatus = SourceHealthStatus.UNHEALTHY;
 

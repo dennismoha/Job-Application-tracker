@@ -41,11 +41,11 @@ async function upsertCategory(seed: CategorySeed, parentId?: string): Promise<Jo
     create: {
       name: seed.name,
       slug: seed.slug,
-      parentId,
+      ...(parentId !== undefined ? { parentId } : {}),
     },
     update: {
       name: seed.name,
-      parentId,
+      ...(parentId !== undefined ? { parentId } : {}),
     },
   });
 

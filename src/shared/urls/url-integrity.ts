@@ -11,7 +11,7 @@ const TRACKING_PARAMS = new Set([
 function isPrivateIpv4(address: string): boolean {
   const parts = address.split('.').map(Number);
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [a,b] = parts;
+  const [a, b] = parts as [number, number, number, number];
   return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
 }
 

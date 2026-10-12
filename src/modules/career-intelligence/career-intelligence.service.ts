@@ -1,3 +1,5 @@
+import type {
+  SearchCampaignStatus} from '@prisma/client';
 import {
   AiTaskType,
   ApplicationPackStatus,
@@ -8,7 +10,6 @@ import {
   JobStatus,
   OfferStatus,
   PriorityBucket,
-  SearchCampaignStatus,
   SmartNotificationState,
   SmartNotificationType,
   type EvidenceType,
@@ -145,7 +146,7 @@ async function createSnapshotForPack(userId: string, applicationId: string, reas
       applicationPackId: pack.id,
       reason,
       sourceUrl: preferredListing?.sourceUrl ?? preferredListing?.applyUrl ?? application.job.officialApplyUrl,
-      contentHash: preferredListing?.contentHash,
+      contentHash: preferredListing?.contentHash ?? null,
       snapshot: jsonValue(jobSnapshot(application.job)),
     },
   });
@@ -170,7 +171,7 @@ function followUpFor(application: Awaited<ReturnType<typeof ownedApplication>>) 
   if (application.stage === ApplicationStage.INTERVIEWED && idleDays <= 2) {
     return { action: FollowUpActionType.THANK_YOU, dueAt: now, reason: 'A short post-interview thank-you or follow-up may be appropriate.' };
   }
-  if ([ApplicationStage.APPLIED, ApplicationStage.SCREENING].includes(application.stage) && idleDays >= 7) {
+  if ((application.stage === ApplicationStage.APPLIED || application.stage === ApplicationStage.SCREENING) && idleDays >= 7) {
     return { action: FollowUpActionType.FOLLOW_UP, dueAt: now, reason: `There has been no recorded application activity for ${idleDays} days.` };
   }
   return { action: FollowUpActionType.WAIT, dueAt: new Date(application.lastActivityAt.getTime() + 7 * 86_400_000), reason: 'No action is required yet based on the recorded application timeline.' };
@@ -189,7 +190,7 @@ export const careerIntelligenceService = {
   },
 
   createEvidence(userId: string, input: Omit<Prisma.EvidenceEntryUncheckedCreateInput, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) {
-    return prisma.evidenceEntry.create({ data: { ...input, userId, metrics: input.metrics ? jsonValue(input.metrics) : undefined } });
+    return prisma.evidenceEntry.create({ data: { ...input, userId, ...(input.metrics ? { metrics: jsonValue(input.metrics) } : {}) } });
   },
 
   async updateEvidence(userId: string, evidenceId: string, input: Prisma.EvidenceEntryUpdateInput) {
@@ -274,7 +275,7 @@ export const careerIntelligenceService = {
       const generated = await aiClient.generateJson<{ content: string; requirementsCovered: Array<{ requirement: string; evidenceIds: string[] }> }>({
         task: AiTaskType.COVER_LETTER,
         userId,
-        profileId,
+        ...(profileId ? { profileId } : {}),
         jobId: application.jobId,
         system: 'Write a truthful cover letter using ONLY the supplied verified evidence. Never invent experience, qualifications, metrics, employers, dates, skills, or achievements. If evidence is missing, omit the claim. Return JSON with content and requirementsCovered.',
         payload: { tone: input.tone, job: jobSnapshot(application.job), requirements, verifiedEvidence: evidencePayload },
@@ -293,7 +294,7 @@ export const careerIntelligenceService = {
         userId,
         applicationId,
         jobId: application.jobId,
-        profileId,
+        ...(profileId ? { profileId } : {}),
         title: `${application.job.title} cover letter`,
         content,
         status: CoverLetterStatus.DRAFT,
@@ -314,20 +315,35 @@ export const careerIntelligenceService = {
     return application.interviewWorkspace ?? prisma.interviewWorkspace.create({ data: { applicationId } });
   },
 
-  async updateInterview(userId: string, applicationId: string, input: Record<string, unknown>) {
+  async updateInterview(
+    userId: string,
+    applicationId: string,
+    input: {
+      scheduledAt?: Date | null;
+      meetingUrl?: string | null;
+      location?: string | null;
+      likelyAreas?: unknown[] | null;
+      starExamples?: unknown[] | null;
+      questionsToAsk?: unknown[] | null;
+      prepNotes?: string | null;
+      questionsAsked?: unknown[] | null;
+      outcomeNotes?: string | null;
+      followUpNotes?: string | null;
+    },
+  ) {
     await ownedApplication(userId, applicationId);
     const existing = await prisma.interviewWorkspace.findUnique({ where: { applicationId } });
     const data = {
-      ...(input.scheduledAt !== undefined ? { scheduledAt: input.scheduledAt as Date | null } : {}),
-      ...(input.meetingUrl !== undefined ? { meetingUrl: input.meetingUrl as string | null } : {}),
-      ...(input.location !== undefined ? { location: input.location as string | null } : {}),
+      ...(input.scheduledAt !== undefined ? { scheduledAt: input.scheduledAt } : {}),
+      ...(input.meetingUrl !== undefined ? { meetingUrl: input.meetingUrl } : {}),
+      ...(input.location !== undefined ? { location: input.location } : {}),
       ...(input.likelyAreas !== undefined ? { likelyAreas: input.likelyAreas ? jsonValue(input.likelyAreas) : Prisma.JsonNull } : {}),
       ...(input.starExamples !== undefined ? { starExamples: input.starExamples ? jsonValue(input.starExamples) : Prisma.JsonNull } : {}),
       ...(input.questionsToAsk !== undefined ? { questionsToAsk: input.questionsToAsk ? jsonValue(input.questionsToAsk) : Prisma.JsonNull } : {}),
-      ...(input.prepNotes !== undefined ? { prepNotes: input.prepNotes as string | null } : {}),
+      ...(input.prepNotes !== undefined ? { prepNotes: input.prepNotes } : {}),
       ...(input.questionsAsked !== undefined ? { questionsAsked: input.questionsAsked ? jsonValue(input.questionsAsked) : Prisma.JsonNull } : {}),
-      ...(input.outcomeNotes !== undefined ? { outcomeNotes: input.outcomeNotes as string | null } : {}),
-      ...(input.followUpNotes !== undefined ? { followUpNotes: input.followUpNotes as string | null } : {}),
+      ...(input.outcomeNotes !== undefined ? { outcomeNotes: input.outcomeNotes } : {}),
+      ...(input.followUpNotes !== undefined ? { followUpNotes: input.followUpNotes } : {}),
     } satisfies Prisma.InterviewWorkspaceUpdateInput;
     return existing
       ? prisma.interviewWorkspace.update({ where: { applicationId }, data })
@@ -352,7 +368,7 @@ export const careerIntelligenceService = {
     return prisma.contact.findMany({ where: { userId }, include: { applications: { include: { application: { include: { job: { include: { company: true } } } } } } }, orderBy: { updatedAt: 'desc' } });
   },
 
-  createContact(userId: string, input: Prisma.ContactUncheckedCreateInput) {
+  createContact(userId: string, input: Omit<Prisma.ContactUncheckedCreateInput, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) {
     return prisma.contact.create({ data: { ...input, userId } });
   },
 
@@ -375,8 +391,8 @@ export const careerIntelligenceService = {
     if (!contact) throw new NotFoundError('Contact not found.');
     return prisma.applicationContact.upsert({
       where: { applicationId_contactId: { applicationId, contactId } },
-      update: { relationship },
-      create: { applicationId, contactId, relationship },
+      update: { relationship: relationship ?? null },
+      create: { applicationId, contactId, relationship: relationship ?? null },
     });
   },
 
@@ -425,8 +441,8 @@ export const careerIntelligenceService = {
     const missing = new Map<string, number>();
     const matched = new Map<string, number>();
     for (const match of matches) {
-      for (const keyword of new Set((match.missingKeywords as string[]).map((item) => item.trim()).filter(Boolean))) missing.set(keyword, (missing.get(keyword) ?? 0) + 1);
-      for (const keyword of new Set((match.matchedKeywords as string[]).map((item) => item.trim()).filter(Boolean))) matched.set(keyword, (matched.get(keyword) ?? 0) + 1);
+      for (const keyword of new Set((match.missingKeywords).map((item) => item.trim()).filter(Boolean))) missing.set(keyword, (missing.get(keyword) ?? 0) + 1);
+      for (const keyword of new Set((match.matchedKeywords).map((item) => item.trim()).filter(Boolean))) matched.set(keyword, (matched.get(keyword) ?? 0) + 1);
     }
     const evidence = await prisma.evidenceEntry.findMany({ where: { userId, verified: true }, select: { title: true, summary: true, skills: true } });
     const evidenceText = evidence.map((item) => `${item.title} ${item.summary} ${item.skills.join(' ')}`).join(' ').toLowerCase();
@@ -616,7 +632,7 @@ export const careerIntelligenceService = {
       return aiClient.generateJson<{ requiresUserInput: boolean; draft: string | null; reason: string; evidenceUsed: string[] }>({
         task: AiTaskType.APPLICATION_ASSISTANT,
         userId,
-        profileId: application.searchProfileId ?? undefined,
+        profileId: application.searchProfileId ?? '',
         jobId: application.jobId,
         system: 'Draft an application-form answer using ONLY verified evidence provided. Do not invent facts. If the question cannot be answered from evidence, set requiresUserInput true and draft null. Return JSON.',
         payload: { fieldLabel, fieldHelp, job: jobSnapshot(application.job), verifiedEvidence: evidencePayload },

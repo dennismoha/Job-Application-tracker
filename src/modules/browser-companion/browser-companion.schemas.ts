@@ -1,11 +1,21 @@
 import { z } from 'zod';
 
+type WithoutUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<Required<T>[K], undefined>;
+} & {
+  [K in keyof T as undefined extends T[K] ? never : K]: Required<T>[K];
+};
+
+function omitUndefined<T extends Record<string, unknown>>(value: T): WithoutUndefined<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as WithoutUndefined<T>;
+}
+
 export const createBrowserTokenSchema = z.object({
   name: z.string().trim().min(2).max(80).default('Browser extension'),
   expiresInDays: z.coerce.number().int().min(1).max(365).optional(),
-});
+}).transform(omitUndefined);
 
-export const captureJobSchema = z.object({
+const captureJobFields = {
   url: z.string().url(),
   pageTitle: z.string().trim().max(500).optional(),
   selectedText: z.string().trim().max(50_000).optional(),
@@ -17,27 +27,33 @@ export const captureJobSchema = z.object({
   cvVersionId: z.string().min(1).optional(),
   sourceId: z.string().min(1).optional(),
   private: z.boolean().default(false),
-});
+};
+
+export const captureJobSchema = z.object(captureJobFields).transform(omitUndefined);
 
 export const browserContextSchema = z.object({
   url: z.string().url(),
 });
 
-export const analyzeBrowserPageSchema = z.object({
+const analyzeBrowserPageFields = {
   url: z.string().url(),
   pageTitle: z.string().trim().max(500).optional(),
   selectedText: z.string().trim().max(50_000).optional(),
   pageText: z.string().trim().max(100_000).optional(),
   structuredData: z.unknown().optional(),
-});
+};
 
-export const compareBrowserPageSchema = analyzeBrowserPageSchema.extend({
-  cvVersionId: z.string().min(1),
-});
+export const analyzeBrowserPageSchema = z.object(analyzeBrowserPageFields).transform(omitUndefined);
 
-export const prepareBrowserCvSchema = captureJobSchema.extend({
+export const compareBrowserPageSchema = z.object({
+  ...analyzeBrowserPageFields,
   cvVersionId: z.string().min(1),
-});
+}).transform(omitUndefined);
+
+export const prepareBrowserCvSchema = z.object({
+  ...captureJobFields,
+  cvVersionId: z.string().min(1),
+}).transform(omitUndefined);
 
 const compactCandidateSchema = z.object({
   score: z.number(),

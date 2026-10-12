@@ -138,7 +138,7 @@ async function requirementsForJob(userId: string, jobId: string, refresh = false
           text: item.text.trim(),
           normalizedKey: item.text.toLowerCase().replace(/[^a-z0-9+#. ]+/g, ' ').replace(/\s+/g, ' ').trim(),
           priority: Math.max(1, Math.min(100, Math.round(item.priority ?? (item.kind === 'REQUIRED' ? 100 : 60)))),
-        })) as typeof extracted;
+        }));
       }
     } catch {
       // Deterministic extraction remains the fallback when AI is unavailable or returns an invalid response.
@@ -220,12 +220,12 @@ async function compare(userId: string, jobId: string, cvVersionId: string, refre
   });
 }
 
-function fallbackSuggestions(items: Array<{ requirementText: string; status: CvMatchStatus; evidence?: string | null; suggestion?: string | null }>) {
+function fallbackSuggestions(items: Array<{ requirementText: string; status: CvMatchStatus; evidence?: string | null; suggestion?: string | null }>): AiTailoringSuggestions['suggestions'] {
   return items
     .filter((item) => item.status !== CvMatchStatus.EVIDENCED && item.status !== CvMatchStatus.NOT_APPLICABLE)
     .map((item) => ({
       requirementText: item.requirementText,
-      beforeText: item.evidence ?? undefined,
+      ...(item.evidence ? { beforeText: item.evidence } : {}),
       reason: item.suggestion ?? 'Review how clearly this requirement is evidenced in the CV.',
       requiresConfirmation: item.status === CvMatchStatus.NOT_EVIDENCED || item.status === CvMatchStatus.NEEDS_CONFIRMATION,
       afterText: null as string | null,
@@ -342,7 +342,7 @@ export const cvService = {
             sourceType: CvSourceType.UPLOADED,
             originalFileName: input.fileName,
             mimeType: parsed.mimeType,
-            originalFileData: parsed.buffer,
+            originalFileData: Uint8Array.from(parsed.buffer),
             cloudinaryPublicId,
             plainText: parsed.text,
           },
@@ -455,7 +455,7 @@ export const cvService = {
       include: { session: true },
     });
     if (!suggestion) throw new NotFoundError('CV suggestion not found.');
-    if (suggestion.requiresConfirmation && [CvSuggestionStatus.ACCEPTED, CvSuggestionStatus.EDITED].includes(input.status) && !input.confirmedFact?.trim()) {
+    if (suggestion.requiresConfirmation && (input.status === CvSuggestionStatus.ACCEPTED || input.status === CvSuggestionStatus.EDITED) && !input.confirmedFact?.trim()) {
       throw new BadRequestError('Confirm the factual experience before adding this missing requirement to the CV.');
     }
     const afterText = input.afterText?.trim() || (input.confirmedFact?.trim() ? `• ${input.confirmedFact.trim()}` : undefined);

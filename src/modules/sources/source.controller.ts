@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import {
   analyzeSourceSchema,
   createSourceSchema,
@@ -19,6 +19,12 @@ function currentUserId(req: Request): string {
   }
 
   return req.currentUser.id;
+}
+
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) throw new BadRequestError(`Route parameter "${name}" is required.`);
+  return value;
 }
 
 export const sourceController = {
@@ -60,14 +66,14 @@ export const sourceController = {
 
   async get(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      res.status(200).json({ source: await sourceService.get(req.params.sourceId) });
+      res.status(200).json({ source: await sourceService.get(routeParam(req, 'sourceId')) });
     } catch (error) {
       next(error);
     }
   },
 
   async workspace(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { res.status(200).json(await sourceService.workspace(req.params.sourceId, currentUserId(req))); } catch (error) { next(error); }
+    try { res.status(200).json(await sourceService.workspace(routeParam(req, 'sourceId'), currentUserId(req))); } catch (error) { next(error); }
   },
 
   async analyze(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -93,7 +99,7 @@ export const sourceController = {
     try {
       const input = updateSourceSchema.parse(req.body);
       res.status(200).json({
-        source: await sourceService.update(req.params.sourceId, currentUserId(req), input),
+      source: await sourceService.update(routeParam(req, 'sourceId'), currentUserId(req), input),
       });
     } catch (error) {
       next(error);
@@ -103,7 +109,7 @@ export const sourceController = {
 
   async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      res.status(200).json(await sourceService.remove(req.params.sourceId, currentUserId(req)));
+      res.status(200).json(await sourceService.remove(routeParam(req, 'sourceId'), currentUserId(req)));
     } catch (error) {
       next(error);
     }
@@ -111,7 +117,7 @@ export const sourceController = {
 
   async audit(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      res.status(201).json(await sourceService.audit(req.params.sourceId, currentUserId(req)));
+      res.status(201).json(await sourceService.audit(routeParam(req, 'sourceId'), currentUserId(req)));
     } catch (error) {
       next(error);
     }

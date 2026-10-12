@@ -1,4 +1,4 @@
-import { CollectionCapability, CircuitState, RunStatus, RunType } from '@prisma/client';
+import { CollectionCapability, CircuitState, RunStatus, RunType, type Prisma } from '@prisma/client';
 
 import { BadRequestError, NotFoundError } from '../../shared/http/http-error.js';
 import { prisma } from '../../shared/prisma/prisma-client.js';
@@ -6,7 +6,11 @@ import { sourceAccessService } from '../sources/source-access.service.js';
 import { AcquisitionDispatcher } from './acquisition-dispatcher.js';
 import { sourceHealthService } from './source-health.service.js';
 
-const ACTIVE_STATUSES = [RunStatus.QUEUED, RunStatus.RUNNING];
+const ACTIVE_STATUSES: RunStatus[] = [RunStatus.QUEUED, RunStatus.RUNNING];
+
+function jsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+}
 
 export const acquisitionRunService = {
   async queueSourceRun(sourceId: string, userId: string, runType?: RunType) {
@@ -20,7 +24,9 @@ export const acquisitionRunService = {
       throw new NotFoundError('Source not found.');
     }
 
-    if ([CollectionCapability.EMAIL_ONLY, CollectionCapability.RESTRICTED, CollectionCapability.DISABLED].includes(source.collectionCapability)) {
+    if (source.collectionCapability === CollectionCapability.EMAIL_ONLY
+      || source.collectionCapability === CollectionCapability.RESTRICTED
+      || source.collectionCapability === CollectionCapability.DISABLED) {
       throw new BadRequestError(`${source.collectionCapability} sources cannot be started as direct network runs.`);
     }
 
@@ -42,7 +48,7 @@ export const acquisitionRunService = {
     return prisma.acquisitionRun.create({
       data: {
         sourceId,
-        scheduleId: source.schedule?.id,
+        ...(source.schedule ? { scheduleId: source.schedule.id } : {}),
         runType: effectiveRunType,
         status: RunStatus.QUEUED,
         scheduledFor: new Date(),
@@ -209,18 +215,20 @@ export const acquisitionRunService = {
         ...(result.httpStatus === undefined ? {} : { httpStatus: result.httpStatus }),
         ...(result.errorCode === undefined ? {} : { errorCode: result.errorCode }),
         ...(result.errorMessage === undefined ? {} : { errorMessage: result.errorMessage }),
-        ...(result.metadata === undefined ? {} : { metadata: result.metadata }),
+        ...(result.metadata === undefined ? {} : { metadata: jsonValue(result.metadata) }),
       },
     });
 
     await sourceHealthService.recordRunResult(run.source.id, result.status);
 
     if (run.crawlerConfigId) {
-      const failed = [RunStatus.FAILED, RunStatus.CHALLENGED, RunStatus.RATE_LIMITED].includes(result.status);
+      const failed = result.status === RunStatus.FAILED
+        || result.status === RunStatus.CHALLENGED
+        || result.status === RunStatus.RATE_LIMITED;
       await prisma.crawlerConfig.updateMany({
         where: { id: run.crawlerConfigId },
         data: failed
-          ? { consecutiveFailures: { increment: 1 }, circuitState: result.status === RunStatus.CHALLENGED ? CircuitState.OPEN : undefined }
+          ? { consecutiveFailures: { increment: 1 }, ...(result.status === RunStatus.CHALLENGED ? { circuitState: CircuitState.OPEN } : {}) }
           : { consecutiveFailures: 0, circuitState: CircuitState.CLOSED },
       });
     }

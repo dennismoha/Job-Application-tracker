@@ -11,7 +11,17 @@ import { z } from 'zod';
 
 const stringArray = z.array(z.string().trim().min(1).max(120)).max(100).default([]);
 
-export const evidenceCreateSchema = z.object({
+type WithoutUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<Required<T>[K], undefined>;
+} & {
+  [K in keyof T as undefined extends T[K] ? never : K]: Required<T>[K];
+};
+
+function omitUndefined<T extends Record<string, unknown>>(value: T): WithoutUndefined<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as WithoutUndefined<T>;
+}
+
+const evidenceFields = {
   type: z.nativeEnum(EvidenceType),
   title: z.string().trim().min(1).max(200),
   summary: z.string().trim().min(1).max(4_000),
@@ -22,12 +32,13 @@ export const evidenceCreateSchema = z.object({
   endedAt: z.coerce.date().optional(),
   skills: stringArray,
   tags: stringArray,
-  metrics: z.record(z.string(), z.unknown()).optional(),
+  metrics: z.record(z.string(), z.json()).optional(),
   verified: z.boolean().default(true),
   sourceLabel: z.string().trim().max(300).optional(),
   sourceCvVersionId: z.string().trim().max(200).optional(),
-});
-export const evidenceUpdateSchema = evidenceCreateSchema.partial();
+};
+export const evidenceCreateSchema = z.object(evidenceFields).transform(omitUndefined);
+export const evidenceUpdateSchema = z.object(evidenceFields).partial().transform(omitUndefined);
 
 export const packUpdateSchema = z.object({
   status: z.nativeEnum(ApplicationPackStatus).optional(),
@@ -35,18 +46,18 @@ export const packUpdateSchema = z.object({
   sourceUrl: z.string().url().nullable().optional(),
   answers: z.record(z.string(), z.unknown()).nullable().optional(),
   notes: z.string().trim().max(30_000).nullable().optional(),
-});
+}).transform(omitUndefined);
 
 export const coverLetterGenerateSchema = z.object({
   profileId: z.string().min(1).optional(),
   evidenceEntryIds: z.array(z.string().min(1)).max(50).optional(),
   tone: z.enum(['professional', 'concise', 'warm']).default('professional'),
-});
+}).transform(omitUndefined);
 export const coverLetterUpdateSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   content: z.string().trim().min(1).max(30_000).optional(),
   status: z.nativeEnum(CoverLetterStatus).optional(),
-});
+}).transform(omitUndefined);
 
 export const interviewUpdateSchema = z.object({
   scheduledAt: z.coerce.date().nullable().optional(),
@@ -59,9 +70,9 @@ export const interviewUpdateSchema = z.object({
   questionsAsked: z.array(z.unknown()).nullable().optional(),
   outcomeNotes: z.string().max(30_000).nullable().optional(),
   followUpNotes: z.string().max(30_000).nullable().optional(),
-});
+}).transform(omitUndefined);
 
-export const contactCreateSchema = z.object({
+const contactFields = {
   name: z.string().trim().min(1).max(200),
   email: z.string().email().optional(),
   phone: z.string().trim().max(100).optional(),
@@ -69,9 +80,10 @@ export const contactCreateSchema = z.object({
   title: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(20_000).optional(),
   nextFollowUpAt: z.coerce.date().nullable().optional(),
-});
-export const contactUpdateSchema = contactCreateSchema.partial();
-export const contactLinkSchema = z.object({ contactId: z.string().min(1), relationship: z.string().trim().max(200).optional() });
+};
+export const contactCreateSchema = z.object(contactFields).transform(omitUndefined);
+export const contactUpdateSchema = z.object(contactFields).partial().transform(omitUndefined);
+export const contactLinkSchema = z.object({ contactId: z.string().min(1), relationship: z.string().trim().max(200).optional() }).transform(omitUndefined);
 
 export const followUpStateSchema = z.object({ state: z.nativeEnum(FollowUpState) });
 
@@ -93,7 +105,7 @@ export const offerUpsertSchema = z.object({
   noticePeriodText: z.string().max(5_000).nullable().optional(),
   otherBenefits: z.string().max(10_000).nullable().optional(),
   notes: z.string().max(20_000).nullable().optional(),
-});
+}).transform(omitUndefined);
 
 export const intelligenceQuerySchema = z.object({
   profileId: z.string().min(1).optional(),
@@ -105,18 +117,18 @@ export const campaignCreateSchema = z.object({
   name: z.string().trim().min(1).max(200),
   startedAt: z.coerce.date().optional(),
   notes: z.string().max(20_000).optional(),
-});
+}).transform(omitUndefined);
 export const campaignUpdateSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   status: z.nativeEnum(SearchCampaignStatus).optional(),
   endedAt: z.coerce.date().nullable().optional(),
   notes: z.string().max(20_000).nullable().optional(),
-});
+}).transform(omitUndefined);
 
 export const assistantFieldSchema = z.object({
   applicationId: z.string().min(1),
   fieldLabel: z.string().trim().min(1).max(500),
   fieldHelp: z.string().trim().max(2_000).optional(),
-});
+}).transform(omitUndefined);
 
 export const notificationStateSchema = z.object({ state: z.nativeEnum(SmartNotificationState) });

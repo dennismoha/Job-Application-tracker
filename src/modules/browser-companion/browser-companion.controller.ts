@@ -18,6 +18,14 @@ function userId(req: Request): string {
   return req.currentUser.id;
 }
 
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) {
+    throw new BadRequestError(`Route parameter "${name}" is required.`);
+  }
+  return value;
+}
+
 export const browserCompanionController = {
   async listTokens(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -40,7 +48,7 @@ export const browserCompanionController = {
   },
   async revokeToken(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await browserCompanionService.revokeToken(userId(req), req.params.tokenId);
+      await browserCompanionService.revokeToken(userId(req), routeParam(req, 'tokenId'));
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -48,7 +56,16 @@ export const browserCompanionController = {
   },
   async createSource(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const input = createSourceSchema.parse(req.body);
+      const parsed = createSourceSchema.parse(req.body);
+      const input = {
+        name: parsed.name,
+        baseUrl: parsed.baseUrl,
+        sourceType: parsed.sourceType,
+        defaultIntervalMinutes: parsed.defaultIntervalMinutes,
+        auditNow: parsed.auditNow,
+        ...(parsed.careersUrl !== undefined ? { careersUrl: parsed.careersUrl } : {}),
+        ...(parsed.collectionCapability !== undefined ? { collectionCapability: parsed.collectionCapability } : {}),
+      };
       res.status(201).json({ source: await sourceService.create(userId(req), input) });
     } catch (error) {
       next(error);

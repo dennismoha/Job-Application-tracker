@@ -23,8 +23,10 @@ function filterByCrawlerConfig(listings: Awaited<ReturnType<JobSourceCollector["
 
 export class SourceCollectorExecutor implements AcquisitionExecutor {
   supports(source: Source, runType: RunType): boolean {
-    if (![CollectionCapability.CRAWLABLE, CollectionCapability.MANUAL_ONLY].includes(source.collectionCapability)) return false;
-    return [RunType.SCHEDULED_CRAWL, RunType.MANUAL_CRAWL].includes(runType);
+    const crawlable = source.collectionCapability === CollectionCapability.CRAWLABLE
+      || source.collectionCapability === CollectionCapability.MANUAL_ONLY;
+    const crawlRun = runType === RunType.SCHEDULED_CRAWL || runType === RunType.MANUAL_CRAWL;
+    return crawlable && crawlRun;
   }
 
   async execute(

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { acquisitionRunService } from './acquisition-run.service.js';
 import { listRunsQuerySchema, pauseScheduleSchema, updateScheduleSchema } from './scheduler.schemas.js';
 import { sourceScheduleService } from './source-schedule.service.js';
@@ -11,11 +11,17 @@ function userId(req: Request): string {
   return req.currentUser.id;
 }
 
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) throw new BadRequestError(`Route parameter "${name}" is required.`);
+  return value;
+}
+
 export const schedulerController = {
   async getSchedule(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
-        schedule: await sourceScheduleService.get(req.params.sourceId, userId(req)),
+        schedule: await sourceScheduleService.get(routeParam(req, 'sourceId'), userId(req)),
       });
     } catch (error) {
       next(error);
@@ -26,7 +32,7 @@ export const schedulerController = {
     try {
       const input = updateScheduleSchema.parse(req.body);
       res.status(200).json({
-        schedule: await sourceScheduleService.update(req.params.sourceId, userId(req), input),
+        schedule: await sourceScheduleService.update(routeParam(req, 'sourceId'), userId(req), input),
       });
     } catch (error) {
       next(error);
@@ -37,7 +43,7 @@ export const schedulerController = {
     try {
       const { minutes } = pauseScheduleSchema.parse(req.body);
       res.status(200).json({
-        schedule: await sourceScheduleService.pause(req.params.sourceId, userId(req), minutes),
+        schedule: await sourceScheduleService.pause(routeParam(req, 'sourceId'), userId(req), minutes),
       });
     } catch (error) {
       next(error);
@@ -47,7 +53,7 @@ export const schedulerController = {
   async resume(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
-        schedule: await sourceScheduleService.resume(req.params.sourceId, userId(req)),
+        schedule: await sourceScheduleService.resume(routeParam(req, 'sourceId'), userId(req)),
       });
     } catch (error) {
       next(error);
@@ -57,7 +63,7 @@ export const schedulerController = {
   async runNow(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(202).json({
-        run: await acquisitionRunService.queueSourceRun(req.params.sourceId, userId(req)),
+        run: await acquisitionRunService.queueSourceRun(routeParam(req, 'sourceId'), userId(req)),
       });
     } catch (error) {
       next(error);
@@ -65,7 +71,7 @@ export const schedulerController = {
   },
 
   async getRun(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { res.status(200).json({ run: await acquisitionRunService.getDetail(req.params.runId, userId(req)) }); } catch (error) { next(error); }
+    try { res.status(200).json({ run: await acquisitionRunService.getDetail(routeParam(req, 'runId'), userId(req)) }); } catch (error) { next(error); }
   },
 
   async listRuns(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {

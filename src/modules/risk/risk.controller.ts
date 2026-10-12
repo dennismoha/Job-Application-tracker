@@ -1,12 +1,18 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { createRiskReportSchema, listRiskReportsSchema } from './risk.schemas.js';
 import { riskService } from './risk.service.js';
 
 function userId(req: Request): string {
   if (!req.currentUser) throw new UnauthorizedError();
   return req.currentUser.id;
+}
+
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) throw new BadRequestError(`Route parameter "${name}" is required.`);
+  return value;
 }
 
 export const riskController = {
@@ -19,6 +25,6 @@ export const riskController = {
     catch (error) { next(error); }
   },
   async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
-    try { await riskService.remove(userId(req), req.params.reportId); res.status(204).end(); } catch (error) { next(error); }
+    try { await riskService.remove(userId(req), routeParam(req, 'reportId')); res.status(204).end(); } catch (error) { next(error); }
   },
 };

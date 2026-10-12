@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { createProfileSchema, updateProfileSchema } from './profile.schemas.js';
 import { profileService } from './profile.service.js';
 
@@ -10,6 +10,12 @@ function currentUserId(req: Request): string {
   }
 
   return req.currentUser.id;
+}
+
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) throw new BadRequestError(`Route parameter "${name}" is required.`);
+  return value;
 }
 
 export const profileController = {
@@ -24,7 +30,7 @@ export const profileController = {
   async get(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
-        profile: await profileService.get(req.params.profileId, currentUserId(req)),
+        profile: await profileService.get(routeParam(req, 'profileId'), currentUserId(req)),
       });
     } catch (error) {
       next(error);
@@ -44,7 +50,7 @@ export const profileController = {
   async update(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateProfileSchema.parse(req.body);
-      const profile = await profileService.update(req.params.profileId, currentUserId(req), input);
+      const profile = await profileService.update(routeParam(req, 'profileId'), currentUserId(req), input);
       res.status(200).json({ profile });
     } catch (error) {
       next(error);
@@ -53,7 +59,7 @@ export const profileController = {
 
   async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await profileService.remove(req.params.profileId, currentUserId(req));
+      await profileService.remove(routeParam(req, 'profileId'), currentUserId(req));
       res.status(204).send();
     } catch (error) {
       next(error);

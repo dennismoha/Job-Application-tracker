@@ -36,7 +36,7 @@ export async function extractTextFromCvUpload(input: {
   if (mimeType === 'application/pdf' || ext === 'pdf') {
     try {
       const module = await import('pdf-parse');
-      const parse = module.default as unknown as (value: Buffer) => Promise<{ text?: string }>;
+      const parse = module.default;
       const result = await parse(buffer);
       const text = result.text?.replace(/\u0000/g, '').trim() ?? '';
       if (!text) throw new Error('empty text');

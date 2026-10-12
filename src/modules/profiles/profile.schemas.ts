@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+type WithoutUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<Required<T>[K], undefined>;
+} & {
+  [K in keyof T as undefined extends T[K] ? never : K]: Required<T>[K];
+};
+
+function omitUndefined<T extends Record<string, unknown>>(value: T): WithoutUndefined<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as WithoutUndefined<T>;
+}
+
 const profileFields = {
   name: z.string().trim().min(2).max(100),
   description: z.string().trim().max(1000).nullable().optional(),
@@ -16,7 +26,7 @@ const profileFields = {
   categoryIds: z.array(z.string().min(1)).max(50).default([]),
 };
 
-export const createProfileSchema = z.object(profileFields);
+export const createProfileSchema = z.object(profileFields).transform(omitUndefined);
 
 export const updateProfileSchema = z.object({
   name: profileFields.name.optional(),
@@ -32,4 +42,4 @@ export const updateProfileSchema = z.object({
   defaultExpiryDays: profileFields.defaultExpiryDays.optional(),
   enabled: profileFields.enabled.optional(),
   categoryIds: profileFields.categoryIds.optional(),
-});
+}).transform(omitUndefined);

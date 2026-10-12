@@ -3,6 +3,16 @@ import { z } from 'zod';
 
 const queryBoolean = z.enum(['true', 'false']).transform((value) => value === 'true');
 
+type WithoutUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<Required<T>[K], undefined>;
+} & {
+  [K in keyof T as undefined extends T[K] ? never : K]: Required<T>[K];
+};
+
+function omitUndefined<T extends Record<string, unknown>>(value: T): WithoutUndefined<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as WithoutUndefined<T>;
+}
+
 export const listJobsSchema = z.object({
   q: z.string().trim().max(200).optional(),
   profileId: z.string().min(1).optional(),
@@ -25,7 +35,7 @@ export const updateJobStateSchema = z.object({
   visited: z.boolean().optional(),
   customExpiresAt: z.coerce.date().nullable().optional(),
   preferredCvVersionId: z.string().min(1).nullable().optional(),
-});
+}).transform(omitUndefined);
 
 export const createJobNoteSchema = z.object({
   note: z.string().trim().min(1).max(10_000),
@@ -68,7 +78,7 @@ export const updateJobSchema = z.object({
   expiresAt: z.string().trim().max(100).nullable().optional(),
   employmentType: z.string().trim().max(100).nullable().optional(),
   url: z.string().url().nullable().optional(),
-});
+}).transform(omitUndefined);
 
 export const moveListingSchema = z.object({
   targetJobId: z.string().min(1),
@@ -78,7 +88,7 @@ export const addJobListingSchema = z.object({
   sourceId: z.string().min(1),
   url: z.string().url().optional(),
   isOfficial: z.boolean().default(false),
-});
+}).transform(omitUndefined);
 
 export const changeListingSourceSchema = z.object({
   sourceId: z.string().min(1),
@@ -89,7 +99,12 @@ export const shareJobsSchema = z.object({
   recipients: z.array(z.string().trim().email().transform((value) => value.toLowerCase())).min(1).max(20),
   subject: z.string().trim().min(1).max(200).optional(),
   message: z.string().trim().max(5000).optional(),
-});
+}).transform((value) => ({
+  jobIds: value.jobIds,
+  recipients: value.recipients,
+  ...(value.subject !== undefined ? { subject: value.subject } : {}),
+  ...(value.message !== undefined ? { message: value.message } : {}),
+}));
 
 export const checkJobUrlSchema = z.object({
   url: z.string().trim().url().refine((value) => /^https?:\/\//i.test(value), { message: 'Only HTTP and HTTPS URLs are supported.' }),

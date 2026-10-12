@@ -41,7 +41,9 @@ export const crawlerConfigService = {
     await sourceAccessService.assertCanManage(sourceId, userId);
     const source = await prisma.source.findUnique({ where: { id: sourceId } });
     if (!source) throw new NotFoundError('Source not found.');
-    if ([CollectionCapability.EMAIL_ONLY, CollectionCapability.RESTRICTED, CollectionCapability.DISABLED].includes(source.collectionCapability)) {
+    if (source.collectionCapability === CollectionCapability.EMAIL_ONLY
+      || source.collectionCapability === CollectionCapability.RESTRICTED
+      || source.collectionCapability === CollectionCapability.DISABLED) {
       throw new BadRequestError(`${source.collectionCapability} sources cannot use automatic crawler configurations.`);
     }
     return prisma.crawlerConfig.create({

@@ -393,8 +393,8 @@ export const jobService = {
       }
     }
 
-    const parseDate = (value: string | null | undefined) => value ? new Date(value) : value === null ? null : undefined;
-    let verifiedJobUrl: string | null | undefined = input.url;
+    const parseDate = (value: string | null): Date | null => value === null ? null : new Date(value);
+    let verifiedJobUrl: string | null = input.url ?? null;
     if (typeof input.url === 'string') {
       const verification = await assertSavableUrl(input.url, 'Job URL');
       verifiedJobUrl = normalizeJobUrl(verification.finalUrl || input.url);

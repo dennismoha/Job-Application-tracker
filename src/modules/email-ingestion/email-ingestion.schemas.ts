@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+type WithoutUndefined<T> = {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<Required<T>[K], undefined>;
+} & {
+  [K in keyof T as undefined extends T[K] ? never : K]: Required<T>[K];
+};
+
+function omitUndefined<T extends Record<string, unknown>>(value: T): WithoutUndefined<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as WithoutUndefined<T>;
+}
+
 const webhookJobSchema = z.object({
   title: z.string().trim().min(2).max(250),
   company: z.string().trim().max(250).optional(),
@@ -13,7 +23,7 @@ const webhookJobSchema = z.object({
   sourceUrl: z.string().url().optional(),
   applyUrl: z.string().url().optional(),
   externalId: z.string().trim().max(250).optional(),
-});
+}).transform(omitUndefined);
 
 export const receiveEmailSchema = z.object({
   userId: z.string().min(1),
@@ -25,7 +35,7 @@ export const receiveEmailSchema = z.object({
   text: z.string().max(500_000).optional(),
   html: z.string().max(1_000_000).optional(),
   jobs: z.array(webhookJobSchema).max(100).default([]),
-});
+}).transform(omitUndefined);
 
 export const acknowledgeLabelSchema = z.object({
   label: z.enum(['RECENT', 'OLD', 'MIXED']),

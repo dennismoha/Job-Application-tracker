@@ -72,7 +72,7 @@ async function saveAudit(sourceId: string, result: SourceAuditResult) {
         recommendedCapability: result.recommendedCapability,
         confidence: result.confidence,
         notes: result.notes.join(' '),
-        metadata: result.metadata,
+        metadata: JSON.parse(JSON.stringify(result.metadata ?? {})) as Prisma.InputJsonValue,
       },
     });
     await tx.source.update({

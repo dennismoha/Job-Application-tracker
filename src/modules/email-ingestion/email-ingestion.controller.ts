@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 
 import { env } from '../../config/env.js';
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { acknowledgeLabelSchema, listEmailIngestionsSchema, receiveEmailSchema } from './email-ingestion.schemas.js';
 import { emailIngestionService } from './email-ingestion.service.js';
 
@@ -12,6 +12,14 @@ function validSecret(value: string | undefined): boolean {
   const received = Buffer.from(value);
   const expected = Buffer.from(env.N8N_INGESTION_SECRET);
   return received.length === expected.length && timingSafeEqual(received, expected);
+}
+
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) {
+    throw new BadRequestError(`Route parameter "${name}" is required.`);
+  }
+  return value;
 }
 
 export const emailIngestionController = {
@@ -39,7 +47,7 @@ export const emailIngestionController = {
     try {
       if (!req.currentUser) throw new UnauthorizedError();
       const { label } = acknowledgeLabelSchema.parse(req.body);
-      const email = await emailIngestionService.acknowledgeLabel(req.currentUser.id, req.params.emailId, label);
+      const email = await emailIngestionService.acknowledgeLabel(req.currentUser.id, routeParam(req, 'emailId'), label);
       res.status(200).json({ email });
     } catch (error) {
       next(error);

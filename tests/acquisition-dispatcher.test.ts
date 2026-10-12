@@ -10,6 +10,7 @@ const source = {
   id: 'source-1',
   name: 'Test Source',
   slug: 'test-source',
+  normalizedDomain: 'example.com',
   sourceType: SourceType.COMPANY_CAREERS,
   collectionCapability: CollectionCapability.CRAWLABLE,
   accessState: SourceAccessState.OPEN,
@@ -28,6 +29,7 @@ const source = {
   systemRiskLevel: RiskLevel.UNKNOWN,
   lastAuditedAt: null,
   active: true,
+  systemOwned: false,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { upsertSourceSubscriptionSchema } from './profile-source.schemas.js';
 import { profileSourceService } from './profile-source.service.js';
 
@@ -9,11 +9,17 @@ function userId(req: Request): string {
   return req.currentUser.id;
 }
 
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) throw new BadRequestError(`Route parameter "${name}" is required.`);
+  return value;
+}
+
 export const profileSourceController = {
   async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
-        subscriptions: await profileSourceService.list(req.params.profileId, userId(req)),
+        subscriptions: await profileSourceService.list(routeParam(req, 'profileId'), userId(req)),
       });
     } catch (error) {
       next(error);
@@ -24,8 +30,8 @@ export const profileSourceController = {
     try {
       const input = upsertSourceSubscriptionSchema.parse(req.body);
       const subscription = await profileSourceService.upsert(
-        req.params.profileId,
-        req.params.sourceId,
+        routeParam(req, 'profileId'),
+        routeParam(req, 'sourceId'),
         userId(req),
         input,
       );
@@ -37,7 +43,7 @@ export const profileSourceController = {
 
   async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await profileSourceService.remove(req.params.profileId, req.params.sourceId, userId(req));
+      await profileSourceService.remove(routeParam(req, 'profileId'), routeParam(req, 'sourceId'), userId(req));
       res.status(204).send();
     } catch (error) {
       next(error);

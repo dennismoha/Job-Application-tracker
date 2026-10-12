@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { UnauthorizedError } from '../../shared/http/http-error.js';
+import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import {
   addJobListingSchema,
   changeListingSourceSchema,
@@ -21,6 +21,14 @@ import { jobUrlService } from './job-url.service.js';
 function currentUserId(req: Request): string {
   if (!req.currentUser) throw new UnauthorizedError();
   return req.currentUser.id;
+}
+
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value !== 'string' || !value) {
+    throw new BadRequestError(`Route parameter "${name}" is required.`);
+  }
+  return value;
 }
 
 export const jobController = {
@@ -46,7 +54,7 @@ export const jobController = {
 
   async get(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const job = await jobService.get(req.params.jobId, currentUserId(req));
+      const job = await jobService.get(routeParam(req, 'jobId'), currentUserId(req));
       res.status(200).json({ job });
     } catch (error) {
       next(error);
@@ -66,20 +74,20 @@ export const jobController = {
   async update(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateJobSchema.parse(req.body);
-      res.status(200).json({ job: await jobService.updateOwnedJob(req.params.jobId, currentUserId(req), input) });
+      res.status(200).json({ job: await jobService.updateOwnedJob(routeParam(req, 'jobId'), currentUserId(req), input) });
     } catch (error) { next(error); }
   },
 
   async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      res.status(200).json(await jobService.deleteOwnedJob(req.params.jobId, currentUserId(req)));
+      res.status(200).json(await jobService.deleteOwnedJob(routeParam(req, 'jobId'), currentUserId(req)));
     } catch (error) { next(error); }
   },
 
   async updateState(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateJobStateSchema.parse(req.body);
-      const state = await jobService.updateState(req.params.jobId, currentUserId(req), input);
+      const state = await jobService.updateState(routeParam(req, 'jobId'), currentUserId(req), input);
       res.status(200).json({ state });
     } catch (error) {
       next(error);
@@ -89,7 +97,7 @@ export const jobController = {
   async addNote(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = createJobNoteSchema.parse(req.body);
-      const note = await jobService.addNote(req.params.jobId, currentUserId(req), input.note);
+      const note = await jobService.addNote(routeParam(req, 'jobId'), currentUserId(req), input.note);
       res.status(201).json({ note });
     } catch (error) {
       next(error);
@@ -100,7 +108,7 @@ export const jobController = {
   async addListing(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = addJobListingSchema.parse(req.body);
-      const job = await jobService.addListing(currentUserId(req), req.params.jobId, input);
+      const job = await jobService.addListing(currentUserId(req), routeParam(req, 'jobId'), input);
       res.status(201).json({ job });
     } catch (error) { next(error); }
   },
@@ -108,7 +116,7 @@ export const jobController = {
   async changeListingSource(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = changeListingSourceSchema.parse(req.body);
-      const job = await jobService.changeListingSource(currentUserId(req), req.params.listingId, input.sourceId);
+      const job = await jobService.changeListingSource(currentUserId(req), routeParam(req, 'listingId'), input.sourceId);
       res.status(200).json({ job });
     } catch (error) { next(error); }
   },
@@ -116,7 +124,7 @@ export const jobController = {
   async moveListing(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = moveListingSchema.parse(req.body);
-      const job = await jobService.moveListing(currentUserId(req), req.params.listingId, input.targetJobId);
+      const job = await jobService.moveListing(currentUserId(req), routeParam(req, 'listingId'), input.targetJobId);
       res.status(200).json({ job });
     } catch (error) {
       next(error);
