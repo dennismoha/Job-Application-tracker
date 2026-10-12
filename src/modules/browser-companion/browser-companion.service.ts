@@ -641,6 +641,7 @@ export const browserCompanionService = {
         score: aiComparison?.matchScore ?? aggregate.score,
         verdict: aiComparison?.verdict,
         summary: aiComparison?.summary,
+        improvedCv: aiComparison?.improvedCv,
         evidencedCount: counts.evidenced,
         partialCount: counts.partial,
         notEvidencedCount: counts.notEvidenced,

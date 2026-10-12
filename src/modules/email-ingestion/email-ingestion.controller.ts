@@ -15,7 +15,7 @@ function validSecret(value: string | undefined): boolean {
 }
 
 export const emailIngestionController = {
-  async webhook(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async webhook(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!validSecret(req.header('x-ingestion-secret'))) throw new UnauthorizedError('Invalid ingestion secret.');
       const input = receiveEmailSchema.parse(req.body);
@@ -25,7 +25,7 @@ export const emailIngestionController = {
     }
   },
 
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.currentUser) throw new UnauthorizedError();
       const { limit } = listEmailIngestionsSchema.parse(req.query);
@@ -35,7 +35,7 @@ export const emailIngestionController = {
     }
   },
 
-  async acknowledgeLabel(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async acknowledgeLabel(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.currentUser) throw new UnauthorizedError();
       const { label } = acknowledgeLabelSchema.parse(req.body);

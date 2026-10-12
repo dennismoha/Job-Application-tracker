@@ -10,25 +10,25 @@ function userId(req: Request): string {
 }
 
 export const reportController = {
-  async overview(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async overview(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await reportService.overview(userId(req), reportFiltersSchema.parse(req.query))); } catch (error) { next(error); }
   },
-  async sources(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async sources(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ sources: await reportService.sources(userId(req), reportFiltersSchema.parse(req.query)) }); } catch (error) { next(error); }
   },
-  async jobs(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async jobs(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ jobs: await reportService.jobs(userId(req), reportFiltersSchema.parse(req.query)) }); } catch (error) { next(error); }
   },
-  async applications(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async applications(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await reportService.applications(userId(req), reportFiltersSchema.parse(req.query))); } catch (error) { next(error); }
   },
-  async risk(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async risk(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await reportService.risk(userId(req), reportFiltersSchema.parse(req.query))); } catch (error) { next(error); }
   },
-  async brain(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async brain(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await reportService.brain(userId(req), reportFiltersSchema.parse(req.query))); } catch (error) { next(error); }
   },
-  async health(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  async health(this: void, _req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await reportService.systemHealth()); } catch (error) { next(error); }
   },
 };

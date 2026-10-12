@@ -16,7 +16,7 @@ function setSessionCookie(res: Response, token: string, expiresAt: Date): void {
 }
 
 export const authController = {
-  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async register(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = registerSchema.parse(req.body);
       const result = await authService.register(input);
@@ -28,7 +28,7 @@ export const authController = {
     }
   },
 
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async login(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = loginSchema.parse(req.body);
       const result = await authService.login(input);
@@ -40,7 +40,7 @@ export const authController = {
     }
   },
 
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logout(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.currentSessionId) {
         throw new UnauthorizedError();
@@ -54,7 +54,7 @@ export const authController = {
     }
   },
 
-  me(req: Request, res: Response): void {
+  me(this: void, req: Request, res: Response): void {
     if (!req.currentUser) {
       throw new UnauthorizedError();
     }

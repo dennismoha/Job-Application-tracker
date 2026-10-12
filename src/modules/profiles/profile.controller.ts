@@ -13,7 +13,7 @@ function currentUserId(req: Request): string {
 }
 
 export const profileController = {
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({ profiles: await profileService.list(currentUserId(req)) });
     } catch (error) {
@@ -21,7 +21,7 @@ export const profileController = {
     }
   },
 
-  async get(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async get(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
         profile: await profileService.get(req.params.profileId, currentUserId(req)),
@@ -31,7 +31,7 @@ export const profileController = {
     }
   },
 
-  async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async create(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = createProfileSchema.parse(req.body);
       const profile = await profileService.create(currentUserId(req), input);
@@ -41,7 +41,7 @@ export const profileController = {
     }
   },
 
-  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async update(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateProfileSchema.parse(req.body);
       const profile = await profileService.update(req.params.profileId, currentUserId(req), input);
@@ -51,7 +51,7 @@ export const profileController = {
     }
   },
 
-  async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await profileService.remove(req.params.profileId, currentUserId(req));
       res.status(204).send();

@@ -10,15 +10,15 @@ function userId(req: Request): string {
 }
 
 export const riskController = {
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ reports: await riskService.list(userId(req), listRiskReportsSchema.parse(req.query)) }); }
     catch (error) { next(error); }
   },
-  async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async create(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(201).json({ report: await riskService.create(userId(req), createRiskReportSchema.parse(req.body)) }); }
     catch (error) { next(error); }
   },
-  async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { await riskService.remove(userId(req), req.params.reportId); res.status(204).end(); } catch (error) { next(error); }
   },
 };

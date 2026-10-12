@@ -19,14 +19,14 @@ function userId(req: Request): string {
 }
 
 export const browserCompanionController = {
-  async listTokens(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listTokens(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({ tokens: await browserCompanionService.listTokens(userId(req)) });
     } catch (error) {
       next(error);
     }
   },
-  async createToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createToken(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(201).json({
         token: await browserCompanionService.createToken(
@@ -38,7 +38,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async revokeToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async revokeToken(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await browserCompanionService.revokeToken(userId(req), req.params.tokenId);
       res.status(204).send();
@@ -46,7 +46,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async createSource(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createSource(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = createSourceSchema.parse(req.body);
       res.status(201).json({ source: await sourceService.create(userId(req), input) });
@@ -54,7 +54,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async listSources(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listSources(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const url = typeof req.query.url === 'string' ? req.query.url : '';
       if (!url) throw new Error('A page URL is required.');
@@ -63,7 +63,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async listCvs(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listCvs(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
         cvs: await browserCompanionService.listCvs(
@@ -75,7 +75,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async analyzePage(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async analyzePage(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const parsed = analyzeCompactBrowserPageSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -93,7 +93,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async comparePage(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async comparePage(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = compareCompactBrowserPageSchema.parse(req.body);
       res.status(200).json(await browserCompanionService.comparePage(userId(req), input));
@@ -101,7 +101,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async prepareCv(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async prepareCv(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res
         .status(201)
@@ -115,7 +115,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async context(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async context(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     console.log('==============> context called with query:', req.query);
 
     try {
@@ -132,7 +132,7 @@ export const browserCompanionController = {
       next(error);
     }
   },
-  async capture(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async capture(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res
         .status(201)

@@ -12,7 +12,7 @@ function userId(req: Request): string {
 }
 
 export const schedulerController = {
-  async getSchedule(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getSchedule(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
         schedule: await sourceScheduleService.get(req.params.sourceId, userId(req)),
@@ -22,7 +22,7 @@ export const schedulerController = {
     }
   },
 
-  async updateSchedule(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateSchedule(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateScheduleSchema.parse(req.body);
       res.status(200).json({
@@ -33,7 +33,7 @@ export const schedulerController = {
     }
   },
 
-  async pause(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async pause(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { minutes } = pauseScheduleSchema.parse(req.body);
       res.status(200).json({
@@ -44,7 +44,7 @@ export const schedulerController = {
     }
   },
 
-  async resume(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async resume(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
         schedule: await sourceScheduleService.resume(req.params.sourceId, userId(req)),
@@ -54,7 +54,7 @@ export const schedulerController = {
     }
   },
 
-  async runNow(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async runNow(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(202).json({
         run: await acquisitionRunService.queueSourceRun(req.params.sourceId, userId(req)),
@@ -64,11 +64,11 @@ export const schedulerController = {
     }
   },
 
-  async getRun(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getRun(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ run: await acquisitionRunService.getDetail(req.params.runId, userId(req)) }); } catch (error) { next(error); }
   },
 
-  async listRuns(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listRuns(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = listRunsQuerySchema.parse(req.query);
       res.status(200).json({ runs: await acquisitionRunService.list(userId(req), input) });

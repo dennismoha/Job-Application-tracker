@@ -5,7 +5,7 @@ import { webSearchSchema } from './search.schemas.js';
 import { searchService } from './search.service.js';
 
 export const searchController = {
-  async search(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async search(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.currentUser) throw new UnauthorizedError();
       const input = webSearchSchema.parse(req.body);

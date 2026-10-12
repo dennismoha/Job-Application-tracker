@@ -10,7 +10,7 @@ function userId(req: Request): string {
 }
 
 export const profileSourceController = {
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({
         subscriptions: await profileSourceService.list(req.params.profileId, userId(req)),
@@ -20,7 +20,7 @@ export const profileSourceController = {
     }
   },
 
-  async upsert(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async upsert(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = upsertSourceSubscriptionSchema.parse(req.body);
       const subscription = await profileSourceService.upsert(
@@ -35,7 +35,7 @@ export const profileSourceController = {
     }
   },
 
-  async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await profileSourceService.remove(req.params.profileId, req.params.sourceId, userId(req));
       res.status(204).send();

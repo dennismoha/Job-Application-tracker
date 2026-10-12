@@ -10,16 +10,16 @@ function userId(req: Request): string {
 }
 
 export const aiController = {
-  async analyzeJob(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async analyzeJob(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { profileId } = analyzeJobSchema.parse(req.body);
       res.status(200).json(await aiService.analyzeJob(userId(req), req.params.jobId, profileId));
     } catch (error) { next(error); }
   },
-  async extractEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async extractEmail(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await aiService.extractEmail(userId(req), req.params.emailId)); } catch (error) { next(error); }
   },
-  async reviewSource(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async reviewSource(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ review: await aiService.reviewSource(userId(req), req.params.sourceId) }); } catch (error) { next(error); }
   },
 };

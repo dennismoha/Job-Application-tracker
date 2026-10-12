@@ -16,7 +16,7 @@ function currentUserId(req: Request): string {
 }
 
 export const ingestionController = {
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = currentUserId(req);
       const input = listSchema.parse(req.query);

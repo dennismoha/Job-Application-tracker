@@ -3,6 +3,7 @@ let captured = null;
 let analysis = null;
 let cvs = [];
 let currentMatch = null;
+let improvedCv = null;
 let sourceContext = null;
 let existingContext = null;
 
@@ -665,6 +666,8 @@ function renderCvs() {
 
 function renderMatch(match) {
   currentMatch = match;
+  improvedCv = match?.improvedCv ?? null;
+  document.getElementById('improve').disabled = !improvedCv;
   const panel = document.getElementById('match');
   panel.hidden = !match;
   if (!match) return;
@@ -862,27 +865,27 @@ async function save(action, includeCv = false) {
   }
 }
 
+function createChatGPTUrl(payload) {
+  const prompt = `${payload.system_prompt}\n\nCV content JSON:\n${JSON.stringify(payload.cv_content, null, 2)}\n\nReturn the completed CV as valid JSON, then provide a polished, print-ready version that I can save as a PDF.`;
+  const url = new URL('https://chatgpt.com/');
+  url.searchParams.set('q', prompt);
+  return url.toString();
+}
+
 async function improveCv() {
-  const cvVersionId = selectedCvVersionId();
-  if (!cvVersionId || !captured) return;
-  setMessage('Preparing the CV workspace…');
+  if (!improvedCv) {
+    setMessage('Compare a CV with this job first to generate improved CV content.');
+    return;
+  }
+
+  const payload = {
+    system_prompt: `Convert the supplied CV JSON into a professionally formatted CV data object.\n\nRequirements:\n- Preserve the existing JSON structure.\n- Keep all existing keys.\n- Populate fields using only the supplied information.\n- Use concise, achievement-oriented descriptions.\n- Do not invent qualifications or experience.\n- use the plaintext key in the json. when done, produce a pdf version of it for the user to download.`,
+    cv_content: improvedCv,
+  };
+
   try {
-    const note = document.getElementById('note').value.trim();
-    const result = await api('/api/browser-companion/prepare-cv', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...captured,
-        cvVersionId,
-        ...(selectedSourceId() ? { sourceId: selectedSourceId() } : {}),
-        action: 'SAVE',
-        ...(note ? { note } : {}),
-        private: false,
-      }),
-    });
-    const config = await settings();
-    if (!config.webAppBase) throw new Error('Add the web app address in extension settings.');
-    await ext.tabs.create({ url: `${config.webAppBase}/#/cv-tailor?sessionId=${encodeURIComponent(result.session.id)}` });
-    setMessage('Tailoring workspace opened in a new tab.');
+    await ext.tabs.create({ url: createChatGPTUrl(payload) });
+    setMessage('Opened the job-tailored CV prompt in ChatGPT.');
   } catch (error) {
     setMessage(error.message);
   }

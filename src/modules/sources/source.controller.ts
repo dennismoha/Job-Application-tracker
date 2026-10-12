@@ -22,20 +22,20 @@ function currentUserId(req: Request): string {
 }
 
 export const sourceController = {
-  async verify(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async verify(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { url } = verifySourceSchema.parse(req.body);
       res.status(200).json({ verification: await sourceService.verifyUrl(url) });
     } catch (error) { next(error); }
   },
-  async resolve(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async resolve(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { url } = resolveSourceSchema.parse(req.body);
       const result = await sourceService.resolveByUrl(url);
       res.status(200).json({ ...result, unclassified: result.matched ? null : await sourceService.ensureUnclassifiedSource() });
     } catch (error) { next(error); }
   },
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async list(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const query = listSourcesQuerySchema.parse(req.query);
       const where: Prisma.SourceWhereInput = {
@@ -58,7 +58,7 @@ export const sourceController = {
     }
   },
 
-  async get(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async get(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json({ source: await sourceService.get(req.params.sourceId) });
     } catch (error) {
@@ -66,11 +66,11 @@ export const sourceController = {
     }
   },
 
-  async workspace(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async workspace(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json(await sourceService.workspace(req.params.sourceId, currentUserId(req))); } catch (error) { next(error); }
   },
 
-  async analyze(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async analyze(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { url } = analyzeSourceSchema.parse(req.body);
       res.status(200).json({ analysis: await sourceAuditService.analyze(url) });
@@ -79,7 +79,7 @@ export const sourceController = {
     }
   },
 
-  async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async create(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = createSourceSchema.parse(req.body);
       const source = await sourceService.create(currentUserId(req), input);
@@ -89,7 +89,7 @@ export const sourceController = {
     }
   },
 
-  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async update(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = updateSourceSchema.parse(req.body);
       res.status(200).json({
@@ -101,7 +101,7 @@ export const sourceController = {
   },
 
 
-  async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(200).json(await sourceService.remove(req.params.sourceId, currentUserId(req)));
     } catch (error) {
@@ -109,7 +109,7 @@ export const sourceController = {
     }
   },
 
-  async audit(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async audit(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       res.status(201).json(await sourceService.audit(req.params.sourceId, currentUserId(req)));
     } catch (error) {
