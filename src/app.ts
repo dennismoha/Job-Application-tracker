@@ -31,12 +31,30 @@ export function createApp(): express.Express {
 
   app.disable('x-powered-by');
   app.use(helmet());
+  // app.use(
+  //   cors({
+  //     origin(origin, callback) {
+  //       const allowed = env.CORS_ORIGIN.split(',').map((item) => item.trim());
+  //       const isBrowserExtension = origin?.startsWith('chrome-extension://') || origin?.startsWith('moz-extension://');
+  //       callback(null, !origin || allowed.includes(origin) || Boolean(isBrowserExtension));
+  //     },
+  //     credentials: true,
+  //   }),
+  // );
+
   app.use(
     cors({
       origin(origin, callback) {
         const allowed = env.CORS_ORIGIN.split(',').map((item) => item.trim());
-        const isBrowserExtension = origin?.startsWith('chrome-extension://') || origin?.startsWith('moz-extension://');
-        callback(null, !origin || allowed.includes(origin) || Boolean(isBrowserExtension));
+
+        const isBrowserExtension =
+          origin?.startsWith('chrome-extension://') ||
+          origin?.startsWith('moz-extension://');
+
+        callback(
+          null,
+          !origin || allowed.includes(origin) || Boolean(isBrowserExtension),
+        );
       },
       credentials: true,
     }),
