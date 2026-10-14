@@ -8,7 +8,7 @@ import { loginSchema, registerSchema } from './auth.schemas.js';
 function setSessionCookie(res: Response, token: string, expiresAt: Date): void {
   res.cookie(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: env.NODE_ENV === 'production' ? 'none' : 'none',
     secure: env.NODE_ENV === 'production',
     expires: expiresAt,
     path: '/',
