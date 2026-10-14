@@ -49,8 +49,9 @@ export default function Register({
 
   return (
     <div
+      className="public-auth-page"
       style={{
-        minHeight: '100vh',
+        minHeight: 'calc(100vh - 76px)',
         background: '#070b14',
         display: 'flex',
         alignItems: 'center',

@@ -8,12 +8,12 @@
     "storage",
     "scripting",
     "contextMenus",
-    "tabs",
-    "sidebarAction",
+    "tabs",  
     "sidePanel"
   ],
   "host_permissions": [
     "http://localhost:4000/*"
+    // "https://job-application-tracker-k0jm.onrender.com"
   ],
   "action": {
     "default_title": "Save to Job Intelligence",
@@ -23,5 +23,10 @@
   "background": {
     "service_worker": "background.js"
   },
-  "incognito": "split"
+  "incognito": "split",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }

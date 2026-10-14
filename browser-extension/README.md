@@ -29,7 +29,7 @@ The companion never treats a missing CV phrase as proof that the user lacks the 
    - Web app address, e.g. `http://localhost:5173`
    - Companion token
 
-The development manifest grants API host access only to `http://localhost:4000/*`. Add the deployed API origin to `host_permissions` when packaging production builds.
+The development manifest grants API host access to `http://localhost:4000/*` and the deployed API. Create the Chrome Web Store ZIP from the repository root with `npm run extension:package`; the packaged manifest removes localhost access and keeps the deployed API origin. The source manifest remains unchanged for local development.
 
 ## v1.2 application intelligence
 

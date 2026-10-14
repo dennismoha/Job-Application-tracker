@@ -27,6 +27,7 @@
     "docs:build": "vite build --config docs/viewer/vite.config.ts",
     "project:check": "node scripts/check-project.mjs && node scripts/check-v17-ui-shell.mjs",
     "research:import-sources": "tsx scripts/import-research-sources.ts",
+    "extension:package": "tsx scripts/package-extension.ts",
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",
     "web:typecheck": "npm --prefix web run typecheck",

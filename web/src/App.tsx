@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ApiError, api } from './api/client';
 import GlobalSearch from './components/GlobalSearch';
+import PublicNavbar from './components/PublicNavbar';
 import { ProductTour } from './components/ProductTour';
 import TopBar from './components/TopBar';
 import { ToastProvider } from './components/Toast';
@@ -13,9 +14,12 @@ import CrawlSessionDetail from './pages/CrawlSessionDetail';
 import Crawling from './pages/Crawling';
 import CVs from './pages/CVs';
 import Dashboard from './pages/Dashboard';
+import About from './pages/About';
 import JobSites from './pages/JobSites';
 import Jobs from './pages/Jobs';
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
+import Privacy from './pages/Privacy';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import UniversalSearch from './pages/UniversalSearch';
@@ -604,7 +608,12 @@ function AppShell({ user, onLogout }: { user: User; onLogout: () => void }) {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [route, setRoute] = useState(() => window.location.pathname);
+
+  const navigate = useCallback((path: string) => {
+    if (window.location.pathname !== path) window.history.pushState({}, '', path);
+    setRoute(path);
+  }, []);
 
   const loadUser = useCallback(async () => {
     try {
@@ -621,6 +630,12 @@ export default function App() {
   useEffect(() => {
     void loadUser();
   }, [loadUser]);
+
+  useEffect(() => {
+    const syncRoute = () => setRoute(window.location.pathname);
+    window.addEventListener('popstate', syncRoute);
+    return () => window.removeEventListener('popstate', syncRoute);
+  }, []);
 
   async function logout() {
     try {
@@ -649,19 +664,30 @@ export default function App() {
 
   return (
     <ToastProvider>
-      {!user && authView === 'login' && (
-        <Login
-          onAuthenticated={(nextUser) => setUser(nextUser)}
-          onRegister={() => setAuthView('register')}
-        />
+      {user ? (
+        <AppShell user={user} onLogout={() => void logout()} />
+      ) : (
+        <div className="public-site">
+          <PublicNavbar currentPath={route} onNavigate={navigate} />
+          {route === '/about' ? (
+            <About />
+          ) : route === '/privacy' ? (
+            <Privacy />
+          ) : route === '/register' ? (
+            <Register
+              onAuthenticated={(nextUser) => setUser(nextUser)}
+              onLogin={() => navigate('/login')}
+            />
+          ) : route === '/login' ? (
+            <Login
+              onAuthenticated={(nextUser) => setUser(nextUser)}
+              onRegister={() => navigate('/register')}
+            />
+          ) : (
+            <LandingPage onNavigate={navigate} />
+          )}
+        </div>
       )}
-      {!user && authView === 'register' && (
-        <Register
-          onAuthenticated={(nextUser) => setUser(nextUser)}
-          onLogin={() => setAuthView('login')}
-        />
-      )}
-      {user && <AppShell user={user} onLogout={() => void logout()} />}
     </ToastProvider>
   );
 }
