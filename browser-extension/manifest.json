@@ -12,8 +12,8 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "http://localhost:4000/*"
-    // "https://job-application-tracker-k0jm.onrender.com"
+    "http://localhost:4000/*",
+    "https://job-application-tracker-k0jm.onrender.com/"
   ],
   "action": {
     "default_title": "Save to Job Intelligence",
