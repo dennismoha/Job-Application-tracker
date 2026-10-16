@@ -22,7 +22,7 @@ import LandingPage from './pages/LandingPage';
 import Privacy from './pages/Privacy';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
-import UniversalSearch from './pages/UniversalSearch';
+import UniversalSearch from './pages/universal-search';
 import type { SearchProfileSummary } from './types/jobs';
 import type { Page } from './types/navigation';
 

@@ -30,7 +30,7 @@ export const searchService = {
       query: input.query,
       ...(input.countryCode ? { countryCode: input.countryCode } : {}),
       languageCode: input.languageCode,
-      limit: input.limit,
+      // limit: input.limit,
     });
 
     const discoveredAt = new Date();
@@ -65,6 +65,7 @@ export const searchService = {
       query: input.query,
       results: accepted.map((result, index) => ({
         ...result,
+        ingestion: summary.outcomes[index],
         detectedSource: resolutions[index]?.resolution.source ? {
           id: resolutions[index]!.resolution.source!.id,
           name: resolutions[index]!.resolution.source!.name,
