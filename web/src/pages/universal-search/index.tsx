@@ -64,8 +64,7 @@ export default function UniversalSearch({ activeProfileId, profiles, onNavigate 
           languageCode: 'en',
           // limit: 20,
         }),
-      });
-      console.log('Search result:', result);
+      });    
       setResponse(result);
       toast.success(`Search completed. ${result.results.length} candidates inspected.`);
     } catch (cause) {
