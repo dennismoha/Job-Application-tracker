@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 import {
   AcquisitionMethod,
@@ -86,6 +86,10 @@ type AiPageExtraction = z.infer<typeof aiPageExtractionSchema>;
 function section(label: string, items: string[]): string | undefined {
   const content = items.map((item) => cleanJobDescription(item)).filter(Boolean);
   return content.length ? `${label}\n${content.map((item) => `• ${item}`).join('\n')}` : undefined;
+}
+
+function browserAnalysisCacheKey(capture: CompactBrowserCapture): string {
+  return createHash('sha256').update(JSON.stringify(capture)).digest('hex');
 }
 
 function analysisFromAiExtraction(capture: CompactBrowserCapture, extraction: AiPageExtraction) {
@@ -496,13 +500,28 @@ export const browserCompanionService = {
   },
 
   async analyzePage(userId: string, capture: CompactBrowserCapture) {
-    const [analysis, resolution] = await Promise.all([
-      analyzeCompactCaptureWithN8nAi(userId, capture),
-      // analyzeCompactCaptureWithAi(userId, capture),
-      sourceService.resolveByUrl(capture.page.url),
-    ]);
+    const cacheKey = browserAnalysisCacheKey(capture);
+    const cached = await prisma.browserPageAnalysisCache.findUnique({ where: { cacheKey } });
+    let analysis: Record<string, unknown>;
+    let analysisOrigin: 'CACHE' | 'FRESH';
+
+    if (cached) {
+      analysis = cached.result as Record<string, unknown>;
+      analysisOrigin = 'CACHE';
+    } else {
+      analysis = await analyzeCompactCaptureWithN8nAi(userId, capture);
+      await prisma.browserPageAnalysisCache.upsert({
+        where: { cacheKey },
+        create: { cacheKey, pageUrl: capture.page.url, result: analysis as Prisma.InputJsonValue },
+        update: { result: analysis as Prisma.InputJsonValue, pageUrl: capture.page.url },
+      });
+      analysisOrigin = 'FRESH';
+    }
+
+    const resolution = await sourceService.resolveByUrl(capture.page.url);
     return {
       ...analysis,
+      analysisOrigin,
       acquisitionMethod: AcquisitionMethod.BROWSER_COMPANION,
       detectedSource: resolution.source
         ? {

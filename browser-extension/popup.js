@@ -630,7 +630,10 @@ function renderAnalysis() {
 
   detection.textContent = analysis?.isJob ? 'Job detected' : 'Job not confirmed';
   detection.className = `detection ${analysis?.isJob ? 'detected' : 'uncertain'}`;
-  confidence.textContent = analysis?.confidence ? `${analysis.confidence.toLowerCase()} confidence` : '';
+  confidence.textContent = [
+    analysis?.confidence ? `${analysis.confidence.toLowerCase()} confidence` : '',
+    analysis?.analysisOrigin === 'CACHE' ? 'returned from cache' : analysis?.analysisOrigin === 'FRESH' ? 'fresh analysis' : '',
+  ].filter(Boolean).join(' · ');
   notJob.hidden = Boolean(analysis?.isJob);
   cvSection.hidden = !analysis?.isJob;
 
