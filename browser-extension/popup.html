@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="preview.css">
   <title>Job Intelligence</title>
 </head>
 <body>
@@ -47,6 +48,29 @@
     </section>
 
     <section id="cv-section" class="cv-section" hidden>
+      <section id="job-preview" class="job-preview" aria-label="Extracted job details">
+        <div class="preview-hero">
+          <div class="preview-hero-top"><span class="preview-kicker">ROLE SNAPSHOT</span><span id="preview-origin" class="preview-origin"></span></div>
+          <p id="job-summary" class="job-summary"></p>
+        </div>
+        <div class="preview-section">
+          <div class="preview-section-title"><h2>What they’re looking for</h2><span>REQUIREMENTS</span></div>
+          <div id="preview-requirements" class="preview-chips"></div>
+        </div>
+        <div class="preview-section">
+          <div class="preview-section-title"><h2>Useful skills</h2><span>SKILLS</span></div>
+          <div id="preview-skills" class="preview-chips preview-skills"></div>
+        </div>
+        <div class="preview-section">
+          <div class="preview-section-title"><h2>The day-to-day</h2><span>RESPONSIBILITIES</span></div>
+          <div id="preview-responsibilities" class="preview-cards"></div>
+        </div>
+        <div class="preview-extras">
+          <section class="preview-section"><div class="preview-section-title"><h2>Education</h2><span>BACKGROUND</span></div><div id="preview-education" class="preview-chips"></div></section>
+          <section id="preview-benefits-group" class="preview-section" hidden><div class="preview-section-title"><h2>Benefits</h2><span>PERKS</span></div><div id="preview-benefits" class="preview-chips preview-benefits"></div></section>
+        </div>
+        <details id="preview-notes-wrap" class="preview-notes" hidden><summary>Notes about this extraction</summary><div id="preview-notes"></div></details>
+      </section>
       <div class="section-heading"><div><span class="label">CV check</span><strong>Compare before you apply</strong></div></div>
       <label>CV
         <select id="cv-select"></select>

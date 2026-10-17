@@ -621,6 +621,46 @@ function setMessage(value) {
   document.getElementById('message').textContent = value;
 }
 
+function renderPreviewItems(id, values, style = 'chip') {
+  const container = document.getElementById(id);
+  container.replaceChildren();
+  const items = Array.isArray(values) ? values.filter((value) => String(value).trim()) : [];
+  for (const [index, value] of items.entries()) {
+    const item = document.createElement('span');
+    item.className = style === 'card' ? 'preview-duty' : 'preview-chip';
+    if (style === 'card') {
+      const number = document.createElement('b');
+      number.textContent = String(index + 1).padStart(2, '0');
+      item.append(number, document.createTextNode(value));
+    } else {
+      item.textContent = value;
+    }
+    container.append(item);
+  }
+  if (!items.length) {
+    const empty = document.createElement('span');
+    empty.className = 'preview-empty';
+    empty.textContent = 'No details listed';
+    container.append(empty);
+  }
+}
+
+function renderJobPreview() {
+  const preview = analysis?.jobPreview ?? {};
+  document.getElementById('job-summary').textContent = preview.summary || analysis?.extracted?.description || 'No summary was extracted.';
+  document.getElementById('preview-origin').textContent = analysis?.analysisOrigin === 'CACHE' ? '⚡ From cache' : '✦ Just analyzed';
+  renderPreviewItems('preview-requirements', preview.requirements);
+  renderPreviewItems('preview-skills', preview.skills);
+  renderPreviewItems('preview-responsibilities', preview.responsibilities, 'card');
+  renderPreviewItems('preview-education', preview.education);
+  const benefits = Array.isArray(preview.benefits) ? preview.benefits.filter((item) => String(item).trim()) : [];
+  document.getElementById('preview-benefits-group').hidden = benefits.length === 0;
+  if (benefits.length) renderPreviewItems('preview-benefits', benefits);
+  const notes = Array.isArray(analysis?.extractionNotes) ? analysis.extractionNotes : [];
+  document.getElementById('preview-notes-wrap').hidden = notes.length === 0;
+  if (notes.length) renderPreviewItems('preview-notes', notes);
+}
+
 function renderAnalysis() {
   const detection = document.getElementById('detection');
   const confidence = document.getElementById('confidence');
@@ -641,6 +681,7 @@ function renderAnalysis() {
     document.getElementById('title').textContent = analysis.extracted.title || captured?.pageTitle || 'Current page';
     meta.textContent = [analysis.extracted.company, analysis.extracted.location].filter(Boolean).join(' · ');
   }
+  if (analysis?.isJob) renderJobPreview();
 }
 
 function renderCvs() {

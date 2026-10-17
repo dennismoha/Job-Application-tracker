@@ -140,6 +140,16 @@ function analysisFromAiExtraction(capture: CompactBrowserCapture, extraction: Ai
         : 'LOW',
     isJob,
     extractionNotes: extraction.extractionNotes,
+    jobPreview: isJob
+      ? {
+        summary: extraction.description.trim(),
+        responsibilities: extraction.responsibilities,
+        requirements: extraction.qualifications,
+        skills: extraction.skills,
+        education: extraction.education,
+        benefits: extraction.benefits,
+      }
+      : null,
     extracted: isJob
       ? {
         title: extraction.title.trim(),
