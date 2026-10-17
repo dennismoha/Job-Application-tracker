@@ -852,6 +852,7 @@ async function save(action, includeCv = false) {
         private: false,
       }),
     });
+    console.log('result of save is ', result);
     if (result.cvMatch) renderMatch(result.cvMatch);
     setMessage(result.existingJob
       ? 'Matched an existing job and updated it.'
