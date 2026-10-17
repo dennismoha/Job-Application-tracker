@@ -16,8 +16,7 @@ import { prisma } from '../../shared/prisma/prisma-client.js';
 import { hashSessionToken } from '../../shared/security/session-token.js';
 import { assertSavableUrl, normalizeJobUrl } from '../../shared/urls/url-integrity.js';
 import { applicationService } from '../applications/application.service.js';
-import { aiClient } from '../ai/ai-client.js';
-import { aiClient as n8nAiClient } from '../ai/n8n.js';
+import { aiClient } from '../ai/open-router-clients.js';
 import type { RawJobListing } from '../acquisition/collectors/collector.types.js';
 import { jobIngestionService } from '../ingestion/ingestion.service.js';
 import { cvService } from '../cvs/cv.service.js';
@@ -37,12 +36,14 @@ const aiStringArraySchema = z.preprocess(
   (value) => (value == null ? [] : typeof value === 'string' ? [value] : value),
   z.array(z.string()),
 );
+const pageTypes = ['JOB_DETAIL', 'MULTIPLE_JOBS', 'JOB_SOURCE', 'UNKNOWN'] as const;
+const aiPageTypeSchema = z.preprocess((value) => {
+  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  return (pageTypes as readonly string[]).includes(normalized) ? normalized : 'UNKNOWN';
+}, z.enum(pageTypes));
 
 const aiPageExtractionSchema = z.object({
-  pageType: z.preprocess(
-    (value) => (typeof value === 'string' ? value.trim().toUpperCase() : (value ?? 'UNKNOWN')),
-    z.enum(['JOB_DETAIL', 'MULTIPLE_JOBS', 'JOB_SOURCE', 'UNKNOWN']),
-  ),
+  pageType: aiPageTypeSchema,
   title: aiStringSchema,
   company: aiStringSchema,
   location: aiStringSchema,
@@ -137,17 +138,17 @@ function analysisFromAiExtraction(capture: CompactBrowserCapture, extraction: Ai
     extractionNotes: extraction.extractionNotes,
     extracted: isJob
       ? {
-          title: extraction.title.trim(),
-          company: extraction.company.trim() || null,
-          location: extraction.location.trim() || null,
-          description,
-          postedAt: extraction.postedDate.trim() || null,
-          expiresAt: null,
-          employmentType: extraction.employmentType.trim() || null,
-          workMode: extraction.workMode.trim() || (extraction.remote ? 'REMOTE' : null),
-          salary: extraction.salaryRaw.trim() || null,
-          url: capture.page.url,
-        }
+        title: extraction.title.trim(),
+        company: extraction.company.trim() || null,
+        location: extraction.location.trim() || null,
+        description,
+        postedAt: extraction.postedDate.trim() || null,
+        expiresAt: null,
+        employmentType: extraction.employmentType.trim() || null,
+        workMode: extraction.workMode.trim() || (extraction.remote ? 'REMOTE' : null),
+        salary: extraction.salaryRaw.trim() || null,
+        url: capture.page.url,
+      }
       : null,
   };
 }
@@ -157,6 +158,7 @@ async function analyzeCompactCaptureWithN8nAi(
   capture: CompactBrowserCapture,
   mode: 'extract' | 'both' = 'extract',
   cvText?: string,
+  client = aiClient,
 ) {
   console.log('=++++++++++++>>>>>>>>>>>>=analyzeCompactCaptureWithN8nAi input:', {
     userId,
@@ -164,30 +166,33 @@ async function analyzeCompactCaptureWithN8nAi(
     mode,
     cvText,
   });
-  const result = await n8nAiClient.generateJson<unknown>({
+  const extractPrompt = [
+    'Analyze the supplied compact browser capture and extract the actual current job listing.',
+    'Set pageType to exactly one of JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, or UNKNOWN. If uncertain or unable to classify, use UNKNOWN.',
+    'Use JOB_DETAIL only when one specific job is clearly represented with a title and meaningful job-specific content.',
+    'If multiple listings are present without a clearly selected job, use MULTIPLE_JOBS; never choose the first listing or merge unrelated jobs.',
+    'Prioritize the selected job candidate, then valid JobPosting structured data, then job-specific headings and text.',
+    'Do not treat company About, mission, navigation, footer, recommendations, or similar jobs as job requirements.',
+    'Extract only facts present in the capture. Use empty strings and arrays for missing fields; never invent details.',
+    'Return one JSON object with these exact keys and JSON types: pageType:string enum; title:string; company:string; location:string; remote:boolean; workMode:string; employmentType:string; salaryMin:number or null; salaryMax:number or null; salaryCurrency:string; salaryPeriod:string; salaryRaw:string; postedDate:string; applicationMethod:string; responsibilities:string[]; qualifications:string[]; skills:string[]; education:string[]; benefits:string[]; description:string; extractionNotes:string[].',
+    'For missing scalar strings return "", for missing salaryMin/salaryMax return null, for missing remote return false, and for missing lists return []. Never return null for string or list fields. Never return a single string where a list is required.',
+    'Keep description limited to job-specific role content. Put requirements, responsibilities, qualifications, skills, education, and benefits in their corresponding fields.',
+  ].join(' ');
+  const comparisonPrompt = [
+    'Analyze the supplied compact browser capture and extract the actual current job listing, then compare that listing with the supplied CV text.',
+    'Apply the same page classification and evidence rules as job extraction: use only one clearly represented role, do not merge listings, and never invent job or candidate facts.',
+    'Set job.pageType to exactly one of JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, or UNKNOWN. If uncertain or unable to classify, use UNKNOWN.',
+    'Assess requirements against explicit evidence in the CV. A missing item means it is not evidenced in the CV, not that the candidate lacks it.',
+    'Return one JSON object with top-level job and comparison keys. job must contain the complete extraction object: pageType, title, company, location, remote, workMode, employmentType, salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryRaw, postedDate, applicationMethod, responsibilities, qualifications, skills, education, benefits, description, extractionNotes.',
+    'comparison must contain matchScore (0-100), verdict, summary, matchedRequirements (array of {requirement,evidence}), and missingRequirements (array of {requirement,importance,suggestion}). Include concrete CV evidence for every matched requirement. Do not claim a match without evidence.',
+    'Use empty strings and arrays for missing extraction fields; salaryMin/salaryMax should be null when absent and remote false when absent. Keep all arrays as arrays.',
+  ].join(' ');
+
+  const result = await client.generateJson<unknown>({
     task: AiTaskType.BROWSER_PAGE_ANALYSIS,
     userId,
-    system: [
-      'Evaluate this compact browser capture and extract the actual current job listing.',
-      'Classify pageType as JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, or UNKNOWN.',
-      'Use JOB_DETAIL only when one specific job is clearly represented with a title and meaningful job-specific content.',
-      'If multiple listings are present without a clearly selected job, use MULTIPLE_JOBS; never choose the first listing or merge unrelated jobs.',
-      'Prioritize the selected job candidate, then valid JobPosting structured data, then job-specific headings and text.',
-      'Do not treat company About, mission, navigation, footer, recommendations, or similar jobs as job requirements.',
-      'Extract only facts present in the capture. Use empty strings and arrays for missing fields; never invent details.',
-      mode === 'both'
-        ? 'For both mode, return one JSON object with top-level job and comparison keys. Put the extraction fields under job. Put the CV analysis under comparison, including matchScore, verdict, summary, matchedRequirements (requirement and evidence), and missingRequirements (requirement, importance, and suggestion).'
-        : 'For extract mode, return one JSON object with these exact keys and JSON types: pageType:string enum; title:string; company:string; location:string; remote:boolean; workMode:string; employmentType:string; salaryMin:number or null; salaryMax:number or null; salaryCurrency:string; salaryPeriod:string; salaryRaw:string; postedDate:string; applicationMethod:string; responsibilities:string[]; qualifications:string[]; skills:string[]; education:string[]; benefits:string[]; description:string; extractionNotes:string[].',
-      'For missing scalar strings return "", for missing salaryMin/salaryMax return null, for missing remote return false, and for missing lists return []. Never return null for string or list fields. Never return a single string where a list is required.',
-      'Use only these exact pageType values: JOB_DETAIL, MULTIPLE_JOBS, JOB_SOURCE, UNKNOWN.',
-      mode === 'both'
-        ? 'Both-mode output shape example: {"job":{"pageType":"JOB_DETAIL","title":"...","company":"...","location":"...","remote":false,"workMode":"","employmentType":"","salaryMin":null,"salaryMax":null,"salaryCurrency":"","salaryPeriod":"","salaryRaw":"","postedDate":"","applicationMethod":"","responsibilities":[],"qualifications":[],"skills":[],"education":[],"benefits":[],"description":"...","extractionNotes":[]},"comparison":{"matchScore":0,"verdict":"...","summary":"...","matchedRequirements":[],"missingRequirements":[]}}.'
-        : 'Extract-mode output shape example: {"pageType":"UNKNOWN","title":"","company":"","location":"","remote":false,"workMode":"","employmentType":"","salaryMin":null,"salaryMax":null,"salaryCurrency":"","salaryPeriod":"","salaryRaw":"","postedDate":"","applicationMethod":"","responsibilities":[],"qualifications":[],"skills":[],"education":[],"benefits":[],"description":"","extractionNotes":[]}.',
-      'Keep description limited to job-specific role content. Put requirements, responsibilities, qualifications, skills, education, and benefits in their corresponding fields.',
-    ].join(' '),
-    payload: capture,
-    mode,
-    ...(cvText !== undefined ? { cvText } : {}),
+    system: mode === 'both' ? comparisonPrompt : extractPrompt,
+    payload: mode === 'both' ? { capture, cvText: cvText ?? '' } : capture,
   });
   const response = result && typeof result === 'object' && !Array.isArray(result)
     ? result as Record<string, unknown>
@@ -332,17 +337,17 @@ function analyzePageInput(input: {
     confidence: posting && extracted.confidence === 'HIGH' ? 'HIGH' : extracted.confidence,
     extracted: isJob
       ? {
-          title: extracted.title ?? 'Job opportunity',
-          company: extracted.company ?? companyFrom(posting) ?? null,
-          location: extracted.location ?? locationFrom(posting) ?? null,
-          description: extracted.description,
-          postedAt: stringValue(posting?.datePosted) ?? null,
-          expiresAt: stringValue(posting?.validThrough) ?? null,
-          employmentType: extracted.employmentType ?? stringValue(posting?.employmentType) ?? null,
-          workMode: extracted.workMode ?? null,
-          salary: extracted.salary ?? null,
-          url: input.url,
-        }
+        title: extracted.title ?? 'Job opportunity',
+        company: extracted.company ?? companyFrom(posting) ?? null,
+        location: extracted.location ?? locationFrom(posting) ?? null,
+        description: extracted.description,
+        postedAt: stringValue(posting?.datePosted) ?? null,
+        expiresAt: stringValue(posting?.validThrough) ?? null,
+        employmentType: extracted.employmentType ?? stringValue(posting?.employmentType) ?? null,
+        workMode: extracted.workMode ?? null,
+        salary: extracted.salary ?? null,
+        url: input.url,
+      }
       : null,
   };
 }
@@ -481,10 +486,10 @@ export const browserCompanionService = {
       isMaster: cv.isMaster,
       latestVersion: cv.versions[0]
         ? {
-            id: cv.versions[0].id,
-            versionNumber: cv.versions[0].versionNumber,
-            label: cv.versions[0].label,
-          }
+          id: cv.versions[0].id,
+          versionNumber: cv.versions[0].versionNumber,
+          label: cv.versions[0].label,
+        }
         : null,
       profileLinks: cv.profileLinks,
     }));
@@ -501,10 +506,10 @@ export const browserCompanionService = {
       acquisitionMethod: AcquisitionMethod.BROWSER_COMPANION,
       detectedSource: resolution.source
         ? {
-            id: resolution.source.id,
-            name: resolution.source.name,
-            sourceType: resolution.source.sourceType,
-          }
+          id: resolution.source.id,
+          name: resolution.source.name,
+          sourceType: resolution.source.sourceType,
+        }
         : null,
       sourceClassification: resolution.matched ? 'MATCHED' : 'UNCLASSIFIED',
     };
@@ -522,6 +527,8 @@ export const browserCompanionService = {
     const unclassified = resolution.matched ? null : await sourceService.ensureUnclassifiedSource();
     return { detectedSource: resolution.source, unclassified, sources };
   },
+
+  // the code below uses the gemini configuration direct
 
   // async comparePage(
   //   userId: string,
@@ -566,6 +573,93 @@ export const browserCompanionService = {
   //   };
   // },
 
+  // tis configuration uses n8n AI client for comparison and extraction, which is more advanced and can provide better results.
+  // async comparePage(
+  //   userId: string,
+  //   input: {
+  //     capture: CompactBrowserCapture;
+  //     cvVersionId: string;
+  //   },
+  // ) {
+  //   const version = await cvService.getVersion(userId, input.cvVersionId);
+  //   const analysis = await analyzeCompactCaptureWithN8nAi(
+  //     userId,
+  //     input.capture,
+  //     'both',
+  //     version.plainText,
+  //   );
+  //   if (analysis.pageType !== 'JOB_DETAIL' || !analysis.extracted) {
+  //     return {
+  //       ...analysis,
+  //       match: null,
+  //     };
+  //   }
+
+  //   const requirements = extractRequirementsFromDescription(analysis.extracted.description);
+
+  //   const localItems = requirements.map((requirement) => ({
+  //     requirementText: requirement.text,
+  //     kind: requirement.kind,
+  //     priority: requirement.priority,
+  //     ...compareRequirementToCv(version.plainText, requirement.text),
+  //   }));
+
+  //   const aggregate = scoreRequirementMatches(
+  //     localItems.map((item) => ({
+  //       status: item.status,
+  //       priority: item.priority,
+  //     })),
+  //   );
+
+  //   const aiComparison = analysis.aiComparison;
+  //   const items = aiComparison
+  //     ? [
+  //         ...(aiComparison.matchedRequirements ?? []).map((item) => ({
+  //           requirementText: item.requirement,
+  //           kind: 'MATCHED',
+  //           status: CvMatchStatus.EVIDENCED,
+  //           evidence: item.evidence,
+  //         })),
+  //         ...(aiComparison.missingRequirements ?? []).map((item) => ({
+  //           requirementText: item.requirement,
+  //           kind: item.importance || 'REQUIRED',
+  //           status: item.importance.toUpperCase() === 'REQUIRED'
+  //             ? CvMatchStatus.NEEDS_CONFIRMATION
+  //             : CvMatchStatus.NOT_EVIDENCED,
+  //           suggestion: item.suggestion,
+  //         })),
+  //       ]
+  //     : localItems;
+  //   const counts = {
+  //     evidenced: items.filter((item) => item.status === CvMatchStatus.EVIDENCED).length,
+  //     partial: items.filter((item) => item.status === CvMatchStatus.PARTIAL).length,
+  //     notEvidenced: items.filter((item) => item.status === CvMatchStatus.NOT_EVIDENCED).length,
+  //     needsConfirmation: items.filter((item) => item.status === CvMatchStatus.NEEDS_CONFIRMATION).length,
+  //   };
+
+  //   return {
+  //     ...analysis,
+  //     match: {
+  //       cv: {
+  //         id: version.cv.id,
+  //         name: version.cv.name,
+  //         versionId: version.id,
+  //         versionNumber: version.versionNumber,
+  //       },
+  //       score: aiComparison?.matchScore ?? aggregate.score,
+  //       verdict: aiComparison?.verdict,
+  //       summary: aiComparison?.summary,
+  //       improvedCv: aiComparison?.improvedCv,
+  //       evidencedCount: counts.evidenced,
+  //       partialCount: counts.partial,
+  //       notEvidencedCount: counts.notEvidenced,
+  //       needsConfirmationCount: counts.needsConfirmation,
+  //       items,
+  //     },
+  //   };
+  // },
+
+  // this configuration  should use openRouter
   async comparePage(
     userId: string,
     input: {
@@ -579,6 +673,7 @@ export const browserCompanionService = {
       input.capture,
       'both',
       version.plainText,
+      aiClient,
     );
     if (analysis.pageType !== 'JOB_DETAIL' || !analysis.extracted) {
       return {
@@ -606,21 +701,21 @@ export const browserCompanionService = {
     const aiComparison = analysis.aiComparison;
     const items = aiComparison
       ? [
-          ...(aiComparison.matchedRequirements ?? []).map((item) => ({
-            requirementText: item.requirement,
-            kind: 'MATCHED',
-            status: CvMatchStatus.EVIDENCED,
-            evidence: item.evidence,
-          })),
-          ...(aiComparison.missingRequirements ?? []).map((item) => ({
-            requirementText: item.requirement,
-            kind: item.importance || 'REQUIRED',
-            status: item.importance.toUpperCase() === 'REQUIRED'
-              ? CvMatchStatus.NEEDS_CONFIRMATION
-              : CvMatchStatus.NOT_EVIDENCED,
-            suggestion: item.suggestion,
-          })),
-        ]
+        ...(aiComparison.matchedRequirements ?? []).map((item) => ({
+          requirementText: item.requirement,
+          kind: 'MATCHED',
+          status: CvMatchStatus.EVIDENCED,
+          evidence: item.evidence,
+        })),
+        ...(aiComparison.missingRequirements ?? []).map((item) => ({
+          requirementText: item.requirement,
+          kind: item.importance || 'REQUIRED',
+          status: item.importance.toUpperCase() === 'REQUIRED'
+            ? CvMatchStatus.NEEDS_CONFIRMATION
+            : CvMatchStatus.NOT_EVIDENCED,
+          suggestion: item.suggestion,
+        })),
+      ]
       : localItems;
     const counts = {
       evidenced: items.filter((item) => item.status === CvMatchStatus.EVIDENCED).length,
@@ -769,8 +864,8 @@ export const browserCompanionService = {
     if (!outcome.result) {
       throw new BadRequestError(
         outcome.errorMessage ??
-          outcome.reasons?.join(' ') ??
-          'The page could not be saved as a job.',
+        outcome.reasons?.join(' ') ??
+        'The page could not be saved as a job.',
       );
     }
 

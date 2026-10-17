@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Job Intelligence Companion",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Capture job pages, compare CVs, prepare truthful applications, and track applications in Job Intelligence.",
   "permissions": [
     "activeTab",

@@ -11,7 +11,7 @@ import { BadRequestError, NotFoundError } from '../../shared/http/http-error.js'
 import { prisma } from '../../shared/prisma/prisma-client.js';
 import type { RawJobListing } from '../acquisition/collectors/collector.types.js';
 import { jobIngestionService } from '../ingestion/ingestion.service.js';
-import { aiClient } from './ai-client.js';
+import { aiClient } from './open-router-clients.js';
 
 interface JobAnalysis {
   score: number;

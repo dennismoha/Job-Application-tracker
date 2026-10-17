@@ -30,6 +30,12 @@ const environmentSchema = z.object({
     .default('https://job-intel.app.n8n.cloud/webhook/job-extract'),
   AI_API_KEY: z.string().min(1).optional(),
   AI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  OPENROUTER_MODEL: z.string().min(1).default('google/gemini-2.5-flash'),
+  OPENROUTER_MODELS: z.string().optional(),
+  OPENROUTER_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  OPENROUTER_SITE_URL: z.string().url().default('http://localhost:4000'),
+  OPENROUTER_APP_NAME: z.string().min(1).default('Job Intelligence Platform'),
   AI_DEDUP_ENABLED: z
     .string()
     .default('false')
