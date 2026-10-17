@@ -92,6 +92,21 @@ function browserAnalysisCacheKey(capture: CompactBrowserCapture): string {
   return createHash('sha256').update(JSON.stringify(capture)).digest('hex');
 }
 
+function browserComparisonCacheKey(userId: string, capture: CompactBrowserCapture, cvVersionId: string): string {
+  return createHash('sha256')
+    .update(JSON.stringify({ kind: 'cv-comparison', userId, capture, cvVersionId }))
+    .digest('hex');
+}
+
+async function saveBrowserComparisonCache(cacheKey: string, pageUrl: string, result: Record<string, unknown>) {
+  const jsonResult = JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue;
+  await prisma.browserPageAnalysisCache.upsert({
+    where: { cacheKey },
+    create: { cacheKey, pageUrl, result: jsonResult },
+    update: { pageUrl, result: jsonResult },
+  });
+}
+
 function analysisFromAiExtraction(capture: CompactBrowserCapture, extraction: AiPageExtraction) {
   const extractedText = [
     extraction.description
@@ -696,6 +711,15 @@ export const browserCompanionService = {
       cvVersionId: string;
     },
   ) {
+    const cacheKey = browserComparisonCacheKey(userId, input.capture, input.cvVersionId);
+    const cached = await prisma.browserPageAnalysisCache.findUnique({ where: { cacheKey } });
+    if (cached) {
+      return {
+        ...(cached.result as Record<string, unknown>),
+        comparisonOrigin: 'CACHE' as const,
+      };
+    }
+
     const version = await cvService.getVersion(userId, input.cvVersionId);
     const analysis = await analyzeCompactCaptureWithN8nAi(
       userId,
@@ -705,10 +729,13 @@ export const browserCompanionService = {
       aiClient,
     );
     if (analysis.pageType !== 'JOB_DETAIL' || !analysis.extracted) {
-      return {
+      const result = {
         ...analysis,
         match: null,
+        comparisonOrigin: 'FRESH' as const,
       };
+      await saveBrowserComparisonCache(cacheKey, input.capture.page.url, result);
+      return result;
     }
 
     const requirements = extractRequirementsFromDescription(analysis.extracted.description);
@@ -753,7 +780,7 @@ export const browserCompanionService = {
       needsConfirmation: items.filter((item) => item.status === CvMatchStatus.NEEDS_CONFIRMATION).length,
     };
 
-    return {
+    const result = {
       ...analysis,
       match: {
         cv: {
@@ -772,7 +799,10 @@ export const browserCompanionService = {
         needsConfirmationCount: counts.needsConfirmation,
         items,
       },
+      comparisonOrigin: 'FRESH' as const,
     };
+    await saveBrowserComparisonCache(cacheKey, input.capture.page.url, result);
+    return result;
   },
 
   async context(userId: string, url: string) {

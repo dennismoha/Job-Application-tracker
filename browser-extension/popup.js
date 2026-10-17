@@ -857,9 +857,11 @@ async function compareCv() {
     renderMatch(result.match);
     console.log('===> compare result:', result);
     if (result.match) {
-      setMessage('CV comparison complete. “Not evidenced” means the CV does not show it; it does not automatically mean you lack it.');
+      const origin = result.comparisonOrigin === 'CACHE' ? 'Returned from cache.' : 'Fresh comparison.';
+      setMessage(`${origin} “Not evidenced” means the CV does not show it; it does not automatically mean you lack it.`);
     } else {
-      setMessage(`This page could not be compared as a job (${result.pageType ?? 'no page type'}${result.extracted ? '' : ', no extracted job'}).`);
+      const origin = result.comparisonOrigin === 'CACHE' ? 'Cached result: ' : '';
+      setMessage(`${origin}This page could not be compared as a job (${result.pageType ?? 'no page type'}${result.extracted ? '' : ', no extracted job'}).`);
     }
   } catch (error) {
     setMessage(error.message);
