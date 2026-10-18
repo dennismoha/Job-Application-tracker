@@ -364,8 +364,8 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
     if (first) {
       // The template's first-page portrait occupies the top of the sidebar; preserve it.
       // Keep the original contact and bio-data block exactly beneath the portrait.
-      page.drawRectangle({ x: 48, y: 40, width: 140, height: 490, color: navy });
-      ySide = 519;
+      page.drawRectangle({ x: 48, y: 40, width: 140, height: 479, color: navy });
+      ySide = 510;
     } else {
       // Keep the repeated contact and bio-data at the top of the original continuation rail.
       page.drawRectangle({ x: 48, y: 40, width: 140, height: 640, color: navy });
