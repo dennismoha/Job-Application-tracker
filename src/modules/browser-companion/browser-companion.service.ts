@@ -82,6 +82,28 @@ const aiComparisonSchema = z.object({
 }).passthrough();
 
 type AiPageExtraction = z.infer<typeof aiPageExtractionSchema>;
+type CompactBrowserAnalysis = Awaited<ReturnType<typeof analyzeCompactCaptureWithN8nAi>>;
+type BrowserPageComparisonResult = CompactBrowserAnalysis & {
+  match: {
+    cv: { id: string; name: string; versionId: string; versionNumber: number };
+    score: number;
+    verdict?: string;
+    summary?: string;
+    improvedCv?: unknown;
+    evidencedCount: number;
+    partialCount: number;
+    notEvidencedCount: number;
+    needsConfirmationCount: number;
+    items: Array<{
+      requirementText: string;
+      kind: string;
+      status: CvMatchStatus;
+      evidence?: string;
+      suggestion?: string;
+    }>;
+  } | null;
+  comparisonOrigin: 'CACHE' | 'FRESH';
+};
 
 function section(label: string, items: string[]): string | undefined {
   const content = items.map((item) => cleanJobDescription(item)).filter(Boolean);
@@ -527,11 +549,11 @@ export const browserCompanionService = {
   async analyzePage(userId: string, capture: CompactBrowserCapture) {
     const cacheKey = browserAnalysisCacheKey(capture);
     const cached = await prisma.browserPageAnalysisCache.findUnique({ where: { cacheKey } });
-    let analysis: Record<string, unknown>;
+    let analysis: CompactBrowserAnalysis;
     let analysisOrigin: 'CACHE' | 'FRESH';
 
     if (cached) {
-      analysis = cached.result as Record<string, unknown>;
+      analysis = cached.result as CompactBrowserAnalysis;
       analysisOrigin = 'CACHE';
     } else {
       analysis = await analyzeCompactCaptureWithN8nAi(userId, capture);
@@ -715,7 +737,7 @@ export const browserCompanionService = {
     const cached = await prisma.browserPageAnalysisCache.findUnique({ where: { cacheKey } });
     if (cached) {
       return {
-        ...(cached.result as Record<string, unknown>),
+        ...(cached.result as BrowserPageComparisonResult),
         comparisonOrigin: 'CACHE' as const,
       };
     }
@@ -803,6 +825,89 @@ export const browserCompanionService = {
     };
     await saveBrowserComparisonCache(cacheKey, input.capture.page.url, result);
     return result;
+  },
+
+  async buildCvPreview(userId: string, input: {
+    capture: CompactBrowserCapture;
+    cvVersionId: string;
+    selectedRequirements: Array<{
+      requirementText: string;
+      placement: 'SUMMARY' | 'SKILLS' | 'EXPERIENCE' | 'EDUCATION' | 'OTHER';
+    }>;
+  }) {
+    const cacheKey = browserComparisonCacheKey(userId, input.capture, input.cvVersionId);
+    const cached = await prisma.browserPageAnalysisCache.findUnique({ where: { cacheKey } });
+    if (!cached) {
+      throw new BadRequestError('Compare this CV with the job first so its cached comparison can be used.');
+    }
+
+    const cachedResult = cached.result as BrowserPageComparisonResult;
+    if (!cachedResult.match || cachedResult.pageType !== 'JOB_DETAIL' || !cachedResult.extracted) {
+      throw new BadRequestError('The cached comparison does not contain a confirmed job listing.');
+    }
+
+    const fillableStatuses = new Set<CvMatchStatus>([
+      CvMatchStatus.PARTIAL,
+      CvMatchStatus.NOT_EVIDENCED,
+      CvMatchStatus.NEEDS_CONFIRMATION,
+    ]);
+    const missingItems = cachedResult.match.items.filter((item) => fillableStatuses.has(item.status));
+    const selected = input.selectedRequirements.map((choice) => {
+      const comparisonItem = missingItems.find((item) => item.requirementText === choice.requirementText);
+      if (!comparisonItem) {
+        throw new BadRequestError(`Selected requirement was not a gap in the cached comparison: ${choice.requirementText}`);
+      }
+      return {
+        requirement: comparisonItem.requirementText,
+        currentStatus: comparisonItem.status,
+        placement: choice.placement,
+      };
+    });
+
+    const version = await cvService.getVersion(userId, input.cvVersionId);
+    const job = cachedResult.extracted;
+    const generated = await aiClient.generateJson<{ draftText?: string }>({
+      task: AiTaskType.CV_TAILORING,
+      userId,
+      system: [
+        'Revise the supplied full CV into a job-targeted draft using only the selected gaps from the cached CV and job comparison.',
+        'The user has reviewed and explicitly selected each requirement, confirming it is a real capability they want represented. Add each selected requirement concisely in its requested CV section.',
+        'Use the original CV as the source for concrete evidence and details. Do not invent employers, projects, dates, metrics, credentials, achievements, or specific experience examples. Do not imply a specific past role or accomplishment unless it is present in the original CV.',
+        'Preserve every other original CV fact. Do not rewrite unrelated sections. Keep a readable plain-text CV with headings and line breaks. Return the complete CV, not a summary.',
+        'Return exactly one JSON object: {"draftText":"complete revised CV text"}.',
+      ].join(' '),
+      payload: {
+        originalCv: { plainText: version.plainText },
+        job: {
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          description: job.description,
+        },
+        comparisonGapsSelectedByUser: selected,
+      },
+    });
+
+    const draftText = generated.draftText?.trim();
+    if (
+      !draftText ||
+      draftText.length > 250_000 ||
+      draftText.length < version.plainText.trim().length * 0.5
+    ) {
+      throw new BadRequestError('The generated draft was incomplete. Please try again.');
+    }
+
+    return {
+      cv: { id: version.cv.id, name: version.cv.name, versionId: version.id, versionNumber: version.versionNumber },
+      job: { title: job.title, company: job.company, url: job.url },
+      draftText,
+      selectedRequirements: selected,
+      requirementCoverage: selected.map((item) => ({
+        requirement: item.requirement,
+        ...compareRequirementToCv(draftText, item.requirement),
+      })),
+      comparisonOrigin: 'CACHE' as const,
+    };
   },
 
   async context(userId: string, url: string) {

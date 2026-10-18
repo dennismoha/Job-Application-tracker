@@ -12,7 +12,7 @@ import { BadRequestError, NotFoundError } from '../../shared/http/http-error.js'
 import { prisma } from '../../shared/prisma/prisma-client.js';
 import { aiClient } from '../ai/ai-client.js';
 import { createCvPreviewUrl, deleteCvOriginal, uploadCvOriginal } from './cv-cloudinary.service.js';
-import { createSimpleDocx, createSimplePdf, extractTextFromCvUpload } from './cv-file.service.js';
+import { createCvPdfFromTemplate, createSimpleDocx, createSimplePdf, extractTextFromCvUpload } from './cv-file.service.js';
 import {
   compareRequirementToCv,
   extractRequirementsFromDescription,
@@ -495,6 +495,32 @@ export const cvService = {
     return version;
   },
 
+  async savePreviewAsVersion(userId: string, input: { cvVersionId: string; draftText: string; jobTitle: string }) {
+    const base = await ownedVersion(userId, input.cvVersionId);
+    const highest = await prisma.cvVersion.aggregate({
+      where: { cvId: base.cvId },
+      _max: { versionNumber: true },
+    });
+    const versionNumber = (highest._max.versionNumber ?? 0) + 1;
+    const version = await prisma.cvVersion.create({
+      data: {
+        cvId: base.cvId,
+        versionNumber,
+        label: `Tailored for ${input.jobTitle}`,
+        sourceType: CvSourceType.TAILORED,
+        plainText: input.draftText,
+        changeSummary: `Tailored from version ${base.versionNumber} for ${input.jobTitle}.`,
+        ...(base.originalFileData && base.mimeType?.includes('pdf') ? {
+          originalFileData: base.originalFileData,
+          originalFileName: base.originalFileName,
+          mimeType: base.mimeType,
+        } : {}),
+      },
+      select: { id: true, cvId: true, versionNumber: true, label: true, cv: { select: { name: true } } },
+    });
+    return version;
+  },
+
   async downloadSourceTemplate(userId: string, versionId: string) {
     const version = await ownedVersion(userId, versionId);
     const source = await prisma.cvVersion.findFirst({
@@ -521,10 +547,29 @@ export const cvService = {
         fileName: `${safeName}-v${version.versionNumber}.docx`,
       };
     }
+    const template = version.originalFileData && version.mimeType?.includes('pdf')
+      ? Buffer.from(version.originalFileData)
+      : await prisma.cvVersion.findFirst({
+        where: { cvId: version.cvId, originalFileData: { not: null }, mimeType: { contains: 'pdf' } },
+        orderBy: { versionNumber: 'asc' },
+      }).then((source) => source?.originalFileData ? Buffer.from(source.originalFileData) : null);
     return {
-      buffer: createSimplePdf(version.plainText),
+      buffer: template ? await createCvPdfFromTemplate(version.plainText, template) : createSimplePdf(version.plainText),
       contentType: 'application/pdf',
       fileName: `${safeName}-v${version.versionNumber}.pdf`,
     };
+  },
+
+  async renderPreviewPdf(userId: string, input: { cvVersionId: string; draftText: string }) {
+    const version = await ownedVersion(userId, input.cvVersionId);
+    const template = version.originalFileData && version.mimeType?.includes('pdf')
+      ? Buffer.from(version.originalFileData)
+      : await prisma.cvVersion.findFirst({
+        where: { cvId: version.cvId, originalFileData: { not: null }, mimeType: { contains: 'pdf' } },
+        orderBy: { versionNumber: 'asc' },
+      }).then((source) => source?.originalFileData ? Buffer.from(source.originalFileData) : null);
+    return template
+      ? createCvPdfFromTemplate(input.draftText, template)
+      : createSimplePdf(input.draftText);
   },
 };

@@ -1,4 +1,5 @@
 import { BadRequestError } from '../../shared/http/http-error.js';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
@@ -89,50 +90,326 @@ function pdfEscape(value: string): string {
     .replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\u00FF]/g, '?');
 }
 
-export function createSimplePdf(text: string): Buffer {
-  const lines = wrapText(text, 88);
-  const linesPerPage = 49;
-  const pages: string[][] = [];
-  for (let index = 0; index < lines.length; index += linesPerPage) pages.push(lines.slice(index, index + linesPerPage));
-  if (!pages.length) pages.push(['']);
+const SIDEBAR_SECTIONS = new Set(['CONTACT', 'BIO DATA', 'CORE SKILLS', 'INTERESTS']);
+const SECTION_HEADINGS = new Set([
+  ...SIDEBAR_SECTIONS,
+  'PROFILE', 'SUMMARY', 'PROFESSIONAL SUMMARY', 'TEACHING EXPERIENCE', 'WORK EXPERIENCE',
+  'EXPERIENCE', 'ADDITIONAL PROFESSIONAL EXPERIENCE', 'EDUCATION', 'PROFESSIONAL STRENGTHS',
+  'AWARDS & ACTIVITIES', 'AWARDS AND ACTIVITIES', 'REFEREES', 'REFERENCES', 'CERTIFICATIONS',
+  'PROJECTS', 'VOLUNTEER EXPERIENCE',
+]);
 
-  const objects: string[] = [];
-  const pageIds: number[] = [];
-  const contentIds: number[] = [];
-  const fontId = 3 + pages.length * 2;
+type CvSection = { heading: string; lines: string[] };
 
-  objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
-  for (let index = 0; index < pages.length; index += 1) {
-    pageIds.push(3 + index * 2);
-    contentIds.push(4 + index * 2);
+function isSectionHeading(line: string): boolean {
+  const normalized = line.trim().replace(/:$/, '').toUpperCase();
+  return SECTION_HEADINGS.has(normalized) || (/^[A-Z][A-Z &/+-]{2,}$/.test(normalized) && normalized.length < 42);
+}
+
+function parseCvLayout(text: string): { name: string; role: string; sidebar: CvSection[]; main: CvSection[] } {
+  const lines = text.replace(/\r/g, '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const name = lines[0] || 'Professional Profile';
+  const role = lines[1] && !isSectionHeading(lines[1]) ? lines[1] : '';
+  const sections: CvSection[] = [];
+  let current: CvSection = { heading: '', lines: [] };
+  for (const line of lines.slice(role ? 2 : 1)) {
+    if (isSectionHeading(line)) {
+      if (current.heading || current.lines.length) sections.push(current);
+      current = { heading: line.replace(/:$/, '').trim(), lines: [] };
+    } else {
+      current.lines.push(line);
+    }
   }
-  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+  if (current.heading || current.lines.length) sections.push(current);
+  const sidebar = sections.filter((section) => SIDEBAR_SECTIONS.has(section.heading.toUpperCase()));
+  const main = sections.filter((section) => !SIDEBAR_SECTIONS.has(section.heading.toUpperCase()));
+  return { name, role, sidebar, main: main.length ? main : [{ heading: 'PROFILE', lines: lines.slice(1) }] };
+}
 
-  pages.forEach((pageLines, index) => {
+function splitPdfLine(value: string, maxChars: number): string[] {
+  const words = value.replace(/^[•●▪]\s*/, '').split(/\s+/).filter(Boolean);
+  const output: string[] = [];
+  let line = '';
+  for (const word of words) {
+    if (line && `${line} ${word}`.length > maxChars) {
+      output.push(line);
+      line = word;
+    } else {
+      line = line ? `${line} ${word}` : word;
+    }
+  }
+  if (line) output.push(line);
+  return output.length ? output : [''];
+}
+
+function makeTemplatePage(laidOut: ReturnType<typeof parseCvLayout>, mainSections: CvSection[], firstPage: boolean): string {
+  const ops = [
+    'q', '0.09 0.23 0.34 rg', '48 40 140 762 re f', 'Q',
+    '0.12 0.29 0.43 rg', '210 40 3 762 re f',
+  ];
+  let ySide = firstPage ? 788 : 790;
+  let yMain = 788;
+  const sideX = 62;
+  const mainX = 226;
+  const sidebarWidth = 112;
+  const mainWidth = 330;
+  const textAt = (x: number, y: number, value: string, size = 8.3, font = 'F1', color = '0.14 0.19 0.23') => {
+    ops.push(`${color} rg`, 'BT', `/${font} ${size} Tf`, `${x.toFixed(1)} ${y.toFixed(1)} Td`, `(${pdfEscape(value)}) Tj`, 'ET');
+  };
+  const sideColor = '1 1 1';
+  const writeSidebar = (section: CvSection) => {
+    if (ySide < 57) return;
+    ySide -= 4;
+    textAt(sideX, ySide, section.heading.toUpperCase(), 9, 'F2', sideColor);
+    ySide -= 13;
+    for (const source of section.lines) {
+      const bullet = /^[•●▪]/.test(source);
+      const lines = splitPdfLine(source, bullet ? 29 : 31);
+      for (let index = 0; index < lines.length; index += 1) {
+        if (ySide < 52) return;
+        textAt(sideX + (bullet ? 1 : 0), ySide, `${bullet && index === 0 ? '• ' : ''}${lines[index]}`, 7.1, 'F1', sideColor);
+        ySide -= 9;
+      }
+      ySide -= 2;
+    }
+    ySide -= 6;
+  };
+
+  if (firstPage) {
+    const initials = laidOut.name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('');
+    ops.push('0.88 0.93 0.95 rg', '82 692 72 72 re f');
+    textAt(100, 721, initials || 'CV', 21, 'F2', '0.09 0.23 0.34');
+    ySide = 674;
+  }
+  for (const section of laidOut.sidebar) writeSidebar(section);
+  if (firstPage) {
+    textAt(mainX, yMain, laidOut.name.toUpperCase(), 18, 'F2', '0.09 0.23 0.34');
+    yMain -= 17;
+    if (laidOut.role) {
+      const roleLines = splitPdfLine(laidOut.role.toUpperCase(), 56);
+      for (const line of roleLines) { textAt(mainX, yMain, line, 8.2, 'F1', '0.36 0.41 0.45'); yMain -= 11; }
+    }
+    yMain -= 8;
+  }
+  const drawSection = (section: CvSection) => {
+    if (yMain < 65) return false;
+    yMain -= 1;
+    textAt(mainX, yMain, section.heading.toUpperCase(), 10.2, 'F2', '0.09 0.23 0.34');
+    yMain -= 14;
+    for (const source of section.lines) {
+      const bullet = /^[•●▪]/.test(source);
+      const isRole = !bullet && /\s\|\s/.test(source);
+      const lines = splitPdfLine(source, bullet ? 64 : 68);
+      for (let index = 0; index < lines.length; index += 1) {
+        if (yMain < 53) return false;
+        const value = `${bullet && index === 0 ? '• ' : ''}${lines[index]}`;
+        textAt(mainX + (bullet ? 3 : 0), yMain, value, isRole ? 8.4 : 8.1, isRole ? 'F2' : 'F1', isRole ? '0.18 0.23 0.27' : '0.16 0.2 0.23');
+        yMain -= 10;
+      }
+      yMain -= bullet ? 1.5 : 3;
+    }
+    yMain -= 7;
+    return true;
+  };
+  for (const section of mainSections) {
+    if (!drawSection(section)) break;
+  }
+  return ops.join('\n');
+}
+
+export function createSimplePdf(text: string): Buffer {
+  const laidOut = parseCvLayout(text);
+  const pages: CvSection[][] = [[]];
+  let used = 0;
+  for (const section of laidOut.main) {
+    const estimate = 30 + section.lines.reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 66)) * 11, 0);
+    if (used + estimate > 700 && pages[pages.length - 1]!.length) {
+      pages.push([]);
+      used = 0;
+    }
+    pages[pages.length - 1]!.push(section);
+    used += estimate;
+  }
+  const objects: string[] = [];
+  const pageIds = pages.map((_, index) => 3 + index * 2);
+  const contentIds = pages.map((_, index) => 4 + index * 2);
+  const fontRegularId = 3 + pages.length * 2;
+  const fontBoldId = fontRegularId + 1;
+  objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+  pages.forEach((sections, index) => {
     const pageId = pageIds[index]!;
     const contentId = contentIds[index]!;
-    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`;
-    const operations = ['BT', '/F1 10.5 Tf', '50 790 Td', '14 TL'];
-    for (const current of pageLines) {
-      operations.push(`(${pdfEscape(current)}) Tj`, 'T*');
-    }
-    operations.push('ET');
-    const stream = operations.join('\n');
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`;
+    const stream = makeTemplatePage(laidOut, sections, index === 0);
     objects[contentId] = `<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\nstream\n${stream}\nendstream`;
   });
-  objects[fontId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
-
+  objects[fontRegularId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+  objects[fontBoldId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
   let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
   const offsets: number[] = [0];
-  for (let id = 1; id <= fontId; id += 1) {
+  for (let id = 1; id <= fontBoldId; id += 1) {
     offsets[id] = Buffer.byteLength(pdf, 'latin1');
     pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
   }
   const xrefOffset = Buffer.byteLength(pdf, 'latin1');
-  pdf += `xref\n0 ${fontId + 1}\n0000000000 65535 f \n`;
-  for (let id = 1; id <= fontId; id += 1) pdf += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
-  pdf += `trailer\n<< /Size ${fontId + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  pdf += `xref\n0 ${fontBoldId + 1}\n0000000000 65535 f \n`;
+  for (let id = 1; id <= fontBoldId; id += 1) pdf += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${fontBoldId + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
   return Buffer.from(pdf, 'latin1');
+}
+
+function safePdfText(value: string): string {
+  return value
+    .replace(/[•●▪]/g, '•')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '?');
+}
+
+function wrapForFont(value: string, font: Awaited<ReturnType<PDFDocument['embedFont']>>, size: number, width: number): string[] {
+  const words = safePdfText(value).split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && font.widthOfTextAtSize(next, size) > width) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+export async function createCvPdfFromTemplate(text: string, templateBuffer: Buffer): Promise<Buffer> {
+  let template: PDFDocument;
+  try {
+    template = await PDFDocument.load(templateBuffer);
+  } catch {
+    throw new BadRequestError('The original CV PDF template could not be opened.');
+  }
+  const templatePages = await template.getPages();
+  if (!templatePages.length) throw new BadRequestError('The original CV PDF template has no pages.');
+
+  const output = await PDFDocument.create();
+  const [regular, bold] = await Promise.all([
+    output.embedFont(StandardFonts.Helvetica),
+    output.embedFont(StandardFonts.HelveticaBold),
+  ]);
+  const backgrounds = await output.embedPdf(templateBuffer, templatePages.map((_, index) => index));
+  const layout = parseCvLayout(text);
+  const navy = rgb(0.09, 0.23, 0.34);
+  const white = rgb(1, 1, 1);
+  const ink = rgb(0.14, 0.19, 0.23);
+  const muted = rgb(0.36, 0.41, 0.45);
+  const left = 210;
+  const rightMargin = 29;
+  const sideX = 62;
+  const sideWidth = 112;
+  const sideSections = layout.sidebar;
+  let pageIndex = -1;
+  let page!: ReturnType<typeof output.addPage>;
+  let yMain = 0;
+  let ySide = 0;
+
+  const addPage = (first = false) => {
+    pageIndex += 1;
+    const sourceIndex = Math.min(pageIndex, backgrounds.length - 1);
+    const background = backgrounds[sourceIndex]!;
+    const sourceSize = templatePages[sourceIndex]!.getSize();
+    page = output.addPage([sourceSize.width, sourceSize.height]);
+    page.drawPage(background, { x: 0, y: 0, width: sourceSize.width, height: sourceSize.height });
+    page.drawRectangle({ x: left - 8, y: 24, width: sourceSize.width - left + 8, height: sourceSize.height - 48, color: white });
+    if (first) {
+      // The template's first-page portrait occupies the top of the sidebar; preserve it.
+      // Keep the original contact and bio-data block exactly beneath the portrait.
+      page.drawRectangle({ x: 48, y: 40, width: 140, height: 490, color: navy });
+      ySide = 519;
+    } else {
+      // Keep the repeated contact and bio-data at the top of the original continuation rail.
+      page.drawRectangle({ x: 48, y: 40, width: 140, height: 640, color: navy });
+      ySide = 667;
+    }
+    yMain = sourceSize.height - 54;
+    return page;
+  };
+
+  const drawSidebar = (sections: CvSection[]) => {
+    for (const section of sections) {
+      if (ySide < 56) break;
+      ySide -= 4;
+      page.drawText(safePdfText(section.heading.toUpperCase()), { x: sideX, y: ySide, size: 9, font: bold, color: white });
+      ySide -= 14;
+      for (const sourceLine of section.lines) {
+        const bullet = /^[•●▪]/.test(sourceLine);
+        const content = sourceLine.replace(/^[•●▪]\s*/, '');
+        for (const [lineIndex, line] of wrapForFont(content, regular, 7.1, sideWidth - (bullet ? 6 : 0)).entries()) {
+          if (ySide < 52) return;
+          page.drawText(`${bullet && lineIndex === 0 ? '• ' : ''}${line}`, {
+            x: sideX, y: ySide, size: 7.1, font: regular, color: white,
+          });
+          ySide -= 9;
+        }
+        ySide -= 2;
+      }
+      ySide -= 6;
+    }
+  };
+
+  addPage(true);
+  drawSidebar(sideSections.filter((section) => ['CORE SKILLS', 'INTERESTS'].includes(section.heading.toUpperCase())));
+  page.drawText(safePdfText(layout.name.toUpperCase()), { x: left, y: yMain, size: 18, font: bold, color: navy });
+  yMain -= 18;
+  if (layout.role) {
+    for (const line of wrapForFont(layout.role.toUpperCase(), regular, 8.2, 345)) {
+      page.drawText(line, { x: left, y: yMain, size: 8.2, font: regular, color: muted });
+      yMain -= 11;
+    }
+  }
+  yMain -= 10;
+
+  const startContinuationPage = (continuedHeading?: string) => {
+    addPage(false);
+    drawSidebar(sideSections.filter((section) => ['CORE SKILLS', 'INTERESTS'].includes(section.heading.toUpperCase())));
+    yMain = output.getPages()[output.getPageCount() - 1]!.getHeight() - 52;
+    if (continuedHeading) {
+      page.drawText(`${safePdfText(continuedHeading.toUpperCase())} (CONTINUED)`, {
+        x: left, y: yMain, size: 10, font: bold, color: navy,
+      });
+      yMain -= 17;
+    }
+  };
+
+  for (const section of layout.main) {
+    const heading = safePdfText(section.heading.toUpperCase());
+    if (yMain < 70) startContinuationPage();
+    page.drawText(heading, { x: left, y: yMain, size: 10.2, font: bold, color: navy });
+    yMain -= 15;
+    for (const sourceLine of section.lines) {
+      const bullet = /^[•●▪]/.test(sourceLine);
+      const content = sourceLine.replace(/^[•●▪]\s*/, '');
+      const roleLine = !bullet && /\s\|\s/.test(content);
+      const font = roleLine ? bold : regular;
+      const size = roleLine ? 8.4 : 8.1;
+      const lines = wrapForFont(content, font, size, 345 - (bullet ? 8 : 0));
+      for (const [lineIndex, line] of lines.entries()) {
+        if (yMain < 55) startContinuationPage(section.heading);
+        const prefix = bullet && lineIndex === 0 ? '• ' : '';
+        page.drawText(`${prefix}${line}`, {
+          x: left + (bullet ? 3 : 0), y: yMain, size, font, color: ink,
+        });
+        yMain -= 10;
+      }
+      yMain -= bullet ? 1.5 : 3;
+    }
+    yMain -= 8;
+  }
+
+  return Buffer.from(await output.save());
 }
 
 const crcTable = (() => {

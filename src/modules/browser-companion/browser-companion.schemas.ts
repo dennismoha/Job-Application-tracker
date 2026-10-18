@@ -118,4 +118,24 @@ export const compareCompactBrowserPageSchema = z.object({
   cvVersionId: z.string().min(1),
 });
 
+export const buildCvPreviewSchema = z.object({
+  capture: compactBrowserCaptureSchema,
+  cvVersionId: z.string().min(1),
+  selectedRequirements: z.array(z.object({
+    requirementText: z.string().trim().min(1).max(2_000),
+    placement: z.enum(['SUMMARY', 'SKILLS', 'EXPERIENCE', 'EDUCATION', 'OTHER']),
+  })).min(1).max(30),
+});
+
+export const saveCvPreviewSchema = z.object({
+  cvVersionId: z.string().min(1),
+  draftText: z.string().trim().min(1).max(250_000),
+  jobTitle: z.string().trim().min(1).max(500),
+});
+
+export const renderCvPreviewSchema = z.object({
+  cvVersionId: z.string().min(1),
+  draftText: z.string().trim().min(1).max(250_000),
+});
+
 export const analyzeCompactBrowserPageSchema = compactBrowserCaptureSchema;

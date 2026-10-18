@@ -3,14 +3,18 @@ import type { NextFunction, Request, Response } from 'express';
 import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error.js';
 import { createSourceSchema } from '../sources/source.schemas.js';
 import { sourceService } from '../sources/source.service.js';
+import { cvService } from '../cvs/cv.service.js';
 import { browserCompanionService } from './browser-companion.service.js';
 import {
   analyzeCompactBrowserPageSchema,
+  buildCvPreviewSchema,
+  renderCvPreviewSchema,
   browserContextSchema,
   captureJobSchema,
   compareCompactBrowserPageSchema,
   createBrowserTokenSchema,
   prepareBrowserCvSchema,
+  saveCvPreviewSchema,
 } from './browser-companion.schemas.js';
 
 function userId(req: Request): string {
@@ -114,6 +118,44 @@ export const browserCompanionController = {
     try {
       const input = compareCompactBrowserPageSchema.parse(req.body);
       res.status(200).json(await browserCompanionService.comparePage(userId(req), input));
+    } catch (error) {
+      next(error);
+    }
+  },
+  async buildCvPreview(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input = buildCvPreviewSchema.parse(req.body);
+      res.status(200).json(await browserCompanionService.buildCvPreview(userId(req), input));
+    } catch (error) {
+      next(error);
+    }
+  },
+  async saveCvPreview(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input = saveCvPreviewSchema.parse(req.body);
+      res.status(201).json({ version: await cvService.savePreviewAsVersion(userId(req), input) });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async renderCvPreview(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input = renderCvPreviewSchema.parse(req.body);
+      const buffer = await cvService.renderPreviewPdf(userId(req), input);
+      res.setHeader('content-type', 'application/pdf');
+      res.setHeader('content-disposition', 'inline; filename="cv-preview.pdf"');
+      res.status(200).send(buffer);
+    } catch (error) {
+      next(error);
+    }
+  },
+  async downloadCvPreview(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const versionId = routeParam(req, 'versionId');
+      const file = await cvService.download(userId(req), versionId, 'pdf');
+      res.setHeader('content-type', file.contentType);
+      res.setHeader('content-disposition', `attachment; filename="${file.fileName.replace(/"/g, '')}"`);
+      res.status(200).send(file.buffer);
     } catch (error) {
       next(error);
     }

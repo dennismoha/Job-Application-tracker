@@ -75,7 +75,7 @@
       <label>CV
         <select id="cv-select"></select>
       </label>
-      <button id="compare" class="wide">Compare CV with this job</button>
+        <button id="compare" class="wide">Compare CV with this job</button>
       <div id="match" class="match" hidden>
         <div class="report-heading">
           <div><span class="label">CV comparison report</span><strong id="match-cv-name"></strong></div>
@@ -92,6 +92,23 @@
         <button id="improve" class="primary" disabled>Improve CV</button>
       </div>
       <button id="open-cv-library" class="text-button">Open CV library</button>
+    </section>
+
+    <section id="tailored-preview" class="tailored-preview" hidden>
+      <header class="tailored-preview-header"><div><span class="label">Build a targeted CV</span><strong id="tailored-preview-title"></strong><span id="tailored-preview-cv"></span></div><button id="close-tailored-preview" aria-label="Close preview">×</button></header>
+      <p class="tailored-preview-truth">Select the gaps that genuinely describe your capabilities and choose where each belongs. The draft uses your selected CV and the cached comparison; review it before applying.</p>
+      <div id="tailored-gap-list" class="tailored-preview-suggestions"></div>
+      <button id="build-tailored-cv" class="wide primary">Build CV preview</button>
+      <div id="tailored-draft-result" hidden>
+        <p id="tailored-preview-status" class="tailored-preview-status"></p>
+        <div class="tailored-preview-paper"><iframe id="tailored-preview-frame" title="Rendered CV preview"></iframe></div>
+        <details class="tailored-preview-plain"><summary>View draft text</summary><pre id="tailored-preview-text"></pre></details>
+        <h2>Selected requirement coverage</h2>
+        <div id="tailored-preview-coverage" class="tailored-preview-suggestions"></div>
+        <button id="copy-tailored-preview" class="wide">Copy draft text</button>
+        <button id="save-tailored-preview" class="wide primary">Save as a new CV version</button>
+        <button id="download-tailored-preview" class="wide" disabled>Download PDF</button>
+      </div>
     </section>
 
     <label>Optional note<textarea id="note" placeholder="Recruiter name, salary note, next step…"></textarea></label>

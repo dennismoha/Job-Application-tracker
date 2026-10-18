@@ -18,6 +18,10 @@ browserCompanionRouter.get('/sources', requireBrowserCompanion, browserCompanion
 browserCompanionRouter.post('/sources', requireBrowserCompanion, browserCompanionController.createSource);
 browserCompanionRouter.post('/analyze-page', requireBrowserCompanion, browserCompanionController.analyzePage);
 browserCompanionRouter.post('/compare-page', requireBrowserCompanion, browserCompanionController.comparePage);
+browserCompanionRouter.post('/build-cv-preview', requireBrowserCompanion, browserCompanionController.buildCvPreview);
+browserCompanionRouter.post('/render-cv-preview', requireBrowserCompanion, browserCompanionController.renderCvPreview);
+browserCompanionRouter.post('/save-cv-preview', requireBrowserCompanion, browserCompanionController.saveCvPreview);
+browserCompanionRouter.get('/download-cv-preview/:versionId', requireBrowserCompanion, browserCompanionController.downloadCvPreview);
 browserCompanionRouter.post('/prepare-cv', requireBrowserCompanion, browserCompanionController.prepareCv);
 browserCompanionRouter.get('/context', requireBrowserCompanion, browserCompanionController.context);
 browserCompanionRouter.post('/capture', requireBrowserCompanion, browserCompanionController.capture);

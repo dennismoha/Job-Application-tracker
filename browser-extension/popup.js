@@ -3,7 +3,12 @@ let captured = null;
 let analysis = null;
 let cvs = [];
 let currentMatch = null;
-let improvedCv = null;
+let currentCaptureComparison = null;
+let tailoredDraftText = '';
+let tailoredPreviewCvVersionId = null;
+let tailoredPreviewBaseCvVersionId = null;
+let tailoredPreviewJobTitle = '';
+let tailoredPreviewObjectUrl = null;
 let sourceContext = null;
 let existingContext = null;
 
@@ -710,8 +715,7 @@ function renderCvs() {
 
 function renderMatch(match) {
   currentMatch = match;
-  improvedCv = match?.improvedCv ?? null;
-  document.getElementById('improve').disabled = !improvedCv;
+  document.getElementById('improve').disabled = !match?.cv?.versionId;
   const panel = document.getElementById('match');
   panel.hidden = !match;
   if (!match) return;
@@ -778,10 +782,6 @@ function renderMatch(match) {
     }
     findings.append(article);
   }
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
 }
 
 async function init() {
@@ -854,6 +854,7 @@ async function compareCv() {
       body: JSON.stringify({ capture: captured, cvVersionId }),
     });
 
+    currentCaptureComparison = result;
     renderMatch(result.match);
     console.log('===> compare result:', result);
     if (result.match) {
@@ -912,27 +913,205 @@ async function save(action, includeCv = false) {
   }
 }
 
-function createChatGPTUrl(payload) {
-  const prompt = `${payload.system_prompt}\n\nCV content JSON:\n${JSON.stringify(payload.cv_content, null, 2)}\n\nReturn the completed CV as valid JSON, then provide a polished, print-ready version that I can save as a PDF.`;
-  const url = new URL('https://chatgpt.com/');
-  url.searchParams.set('q', prompt);
-  return url.toString();
-}
-
-async function improveCv() {
-  if (!improvedCv) {
-    setMessage('Compare a CV with this job first to generate improved CV content.');
+function openCvBuilder() {
+  if (!currentMatch || !currentCaptureComparison || !captured) {
+    setMessage('Compare a CV with this job first so the cached gaps are available.');
     return;
   }
+  const cvVersionId = currentMatch.cv?.versionId;
+  if (!cvVersionId || cvVersionId !== selectedCvVersionId()) {
+    setMessage('Run the comparison again for the currently selected CV version.');
+    return;
+  }
+  document.getElementById('tailored-preview-title').textContent = analysis?.extracted?.title || 'Current job';
+  document.getElementById('tailored-preview-cv').textContent = `${currentMatch.cv.name} · v${currentMatch.cv.versionNumber}`;
+  document.getElementById('tailored-draft-result').hidden = true;
+  document.getElementById('build-tailored-cv').hidden = false;
+  tailoredDraftText = '';
+  tailoredPreviewCvVersionId = null;
+  tailoredPreviewBaseCvVersionId = cvVersionId;
+  tailoredPreviewJobTitle = analysis?.extracted?.title || 'Current job';
+  document.getElementById('save-tailored-preview').disabled = false;
+  document.getElementById('download-tailored-preview').disabled = true;
 
-  const payload = {
-    system_prompt: `Convert the supplied CV JSON into a professionally formatted CV data object.\n\nRequirements:\n- Preserve the existing JSON structure.\n- Keep all existing keys.\n- Populate fields using only the supplied information.\n- Use concise, achievement-oriented descriptions.\n- Do not invent qualifications or experience.\n- use the plaintext key in the json. when done, produce a pdf version of it for the user to download.`,
-    cv_content: improvedCv,
-  };
+  const list = document.getElementById('tailored-gap-list');
+  list.replaceChildren();
+  const gaps = (currentMatch.items ?? []).filter((item) =>
+    ['PARTIAL', 'NOT_EVIDENCED', 'NEEDS_CONFIRMATION'].includes(item.status),
+  );
+  if (!gaps.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'The comparison found no gaps to fill. You can still review the comparison report.';
+    list.append(empty);
+    document.getElementById('build-tailored-cv').disabled = true;
+  } else {
+    document.getElementById('build-tailored-cv').disabled = false;
+    for (const item of gaps) {
+      const card = document.createElement('article');
+      card.className = 'tailored-gap';
+      const row = document.createElement('label');
+      row.className = 'gap-select-row';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'gap-choice';
+      checkbox.dataset.requirement = item.requirementText;
+      const title = document.createElement('strong');
+      title.textContent = item.requirementText;
+      const status = document.createElement('span');
+      status.textContent = item.status.replaceAll('_', ' ');
+      row.append(checkbox, title, status);
 
+      const placementLabel = document.createElement('label');
+      placementLabel.textContent = 'Add it under';
+      const placement = document.createElement('select');
+      placement.className = 'gap-placement';
+      for (const [value, label] of [
+        ['EXPERIENCE', 'Work experience'],
+        ['SUMMARY', 'Professional summary'],
+        ['SKILLS', 'Skills'],
+        ['EDUCATION', 'Education'],
+        ['OTHER', 'Other section'],
+      ]) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        placement.append(option);
+      }
+      placementLabel.append(placement);
+      card.append(row, placementLabel);
+      list.append(card);
+    }
+  }
+  document.getElementById('tailored-preview').hidden = false;
+  document.getElementById('tailored-preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function buildTailoredCvPreview() {
+  const cvVersionId = currentMatch?.cv?.versionId;
+  if (!cvVersionId || !captured || !currentMatch) {
+    setMessage('Compare a CV with this job first.');
+    return;
+  }
+  const choices = [...document.querySelectorAll('.gap-choice:checked')].map((checkbox) => {
+    const card = checkbox.closest('.tailored-gap');
+    return {
+      requirementText: checkbox.dataset.requirement,
+      placement: card.querySelector('.gap-placement').value,
+    };
+  });
+  if (!choices.length) return setMessage('Select at least one gap you want to add to the CV.');
+  setMessage('Building a draft from the cached comparison and your selected CV…');
+  const button = document.getElementById('build-tailored-cv');
+  button.disabled = true;
   try {
-    await ext.tabs.create({ url: createChatGPTUrl(payload) });
-    setMessage('Opened the job-tailored CV prompt in ChatGPT.');
+    const result = await api('/api/browser-companion/build-cv-preview', {
+      method: 'POST',
+      body: JSON.stringify({
+        capture: captured,
+        cvVersionId,
+        selectedRequirements: choices,
+      }),
+    });
+    tailoredDraftText = result.draftText;
+    tailoredPreviewBaseCvVersionId = cvVersionId;
+    tailoredPreviewCvVersionId = null;
+    tailoredPreviewJobTitle = result.job?.title || analysis?.extracted?.title || 'Current job';
+    document.getElementById('save-tailored-preview').disabled = false;
+    document.getElementById('download-tailored-preview').disabled = true;
+    document.getElementById('tailored-preview-text').textContent = tailoredDraftText;
+    document.getElementById('tailored-preview-status').textContent = 'Built from the cached CV + job comparison and the selected CV version. Review the wording and facts before saving.';
+    const config = await settings();
+    const pdfResponse = await fetch(`${config.apiBase}/api/browser-companion/render-cv-preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${config.companionToken}`,
+      },
+      body: JSON.stringify({ cvVersionId, draftText: tailoredDraftText }),
+    });
+    if (!pdfResponse.ok) {
+      const body = await pdfResponse.json().catch(() => null);
+      throw new Error(body?.message ?? `Could not render CV preview (${pdfResponse.status})`);
+    }
+    if (tailoredPreviewObjectUrl) URL.revokeObjectURL(tailoredPreviewObjectUrl);
+    tailoredPreviewObjectUrl = URL.createObjectURL(await pdfResponse.blob());
+    document.getElementById('tailored-preview-frame').src = tailoredPreviewObjectUrl;
+    const coverage = document.getElementById('tailored-preview-coverage');
+    coverage.replaceChildren();
+    for (const item of result.requirementCoverage ?? []) {
+      const row = document.createElement('div');
+      row.className = 'coverage-row';
+      const requirement = document.createElement('strong');
+      requirement.textContent = item.requirement;
+      const status = document.createElement('span');
+      status.textContent = item.status?.replaceAll('_', ' ') ?? 'REVIEW';
+      row.append(requirement, status);
+      coverage.append(row);
+    }
+    document.getElementById('tailored-draft-result').hidden = false;
+    document.getElementById('build-tailored-cv').hidden = true;
+    setMessage('Draft preview ready. Review it before using or saving it.');
+  } catch (error) {
+    setMessage(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyTailoredPreview() {
+  const text = tailoredDraftText;
+  try {
+    await navigator.clipboard.writeText(text);
+    setMessage('Draft copied to clipboard.');
+  } catch (error) {
+    setMessage(`Could not copy the draft: ${error.message}`);
+  }
+}
+
+async function saveTailoredPreview() {
+  if (!tailoredDraftText || !tailoredPreviewBaseCvVersionId) return;
+  const button = document.getElementById('save-tailored-preview');
+  button.disabled = true;
+  setMessage('Saving the tailored CV as a new version…');
+  try {
+    const result = await api('/api/browser-companion/save-cv-preview', {
+      method: 'POST',
+      body: JSON.stringify({
+        cvVersionId: tailoredPreviewBaseCvVersionId,
+        draftText: tailoredDraftText,
+        jobTitle: tailoredPreviewJobTitle,
+      }),
+    });
+    tailoredPreviewCvVersionId = result.version.id;
+    document.getElementById('tailored-preview-status').textContent = `Saved as ${result.version.cv.name} · v${result.version.versionNumber}.`;
+    document.getElementById('download-tailored-preview').disabled = false;
+    setMessage('Saved as a new CV version. You can download the PDF now.');
+  } catch (error) {
+    setMessage(error.message);
+    button.disabled = false;
+  }
+}
+
+async function downloadTailoredPreview() {
+  if (!tailoredPreviewCvVersionId) return;
+  try {
+    const config = await settings();
+    const response = await fetch(`${config.apiBase}/api/browser-companion/download-cv-preview/${encodeURIComponent(tailoredPreviewCvVersionId)}`, {
+      headers: { authorization: `Bearer ${config.companionToken}` },
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message ?? `Download failed (${response.status})`);
+    }
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `${tailoredPreviewJobTitle.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'tailored-cv'}.pdf`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(blobUrl);
+    setMessage('Tailored CV PDF downloaded.');
   } catch (error) {
     setMessage(error.message);
   }
@@ -948,10 +1127,22 @@ document.getElementById('save').addEventListener('click', () => save('SAVE'));
 document.getElementById('applied').addEventListener('click', () => save('APPLIED', Boolean(selectedCvVersionId())));
 document.getElementById('compare').addEventListener('click', compareCv);
 document.getElementById('save-with-cv').addEventListener('click', () => save('SAVE', true));
-document.getElementById('improve').addEventListener('click', improveCv);
+document.getElementById('improve').addEventListener('click', openCvBuilder);
+document.getElementById('close-tailored-preview').addEventListener('click', () => {
+  document.getElementById('tailored-preview').hidden = true;
+  if (tailoredPreviewObjectUrl) URL.revokeObjectURL(tailoredPreviewObjectUrl);
+  tailoredPreviewObjectUrl = null;
+});
+document.getElementById('build-tailored-cv').addEventListener('click', buildTailoredCvPreview);
+document.getElementById('copy-tailored-preview').addEventListener('click', copyTailoredPreview);
+document.getElementById('save-tailored-preview').addEventListener('click', saveTailoredPreview);
+document.getElementById('download-tailored-preview').addEventListener('click', downloadTailoredPreview);
 document.getElementById('open-cv-library').addEventListener('click', openCvLibrary);
 document.getElementById('open-options').addEventListener('click', () => ext.runtime.openOptionsPage());
-document.getElementById('cv-select').addEventListener('change', () => renderMatch(null));
+document.getElementById('cv-select').addEventListener('change', () => {
+  currentCaptureComparison = null;
+  renderMatch(null);
+});
 document.getElementById('toggle-source-form').addEventListener('click', () => { const form = document.getElementById('source-form'); form.hidden = !form.hidden; });
 document.getElementById('create-source').addEventListener('click', createSource);
 void init();
