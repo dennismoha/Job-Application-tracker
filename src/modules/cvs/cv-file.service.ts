@@ -98,32 +98,68 @@ const SECTION_HEADINGS = new Set([
   'AWARDS & ACTIVITIES', 'AWARDS AND ACTIVITIES', 'REFEREES', 'REFERENCES', 'CERTIFICATIONS',
   'PROJECTS', 'VOLUNTEER EXPERIENCE',
 ]);
+const SIDEBAR_FIELD_LABELS = new Set(['TEL', 'TELEPHONE', 'PHONE', 'EMAIL', 'NATIONALITY', 'LOCATION', 'AVAILABILITY']);
 
 type CvSection = { heading: string; lines: string[] };
 
 function isSectionHeading(line: string): boolean {
   const normalized = line.trim().replace(/:$/, '').toUpperCase();
-  return SECTION_HEADINGS.has(normalized) || (/^[A-Z][A-Z &/+-]{2,}$/.test(normalized) && normalized.length < 42);
+  if (SIDEBAR_FIELD_LABELS.has(normalized)) return false;
+  return SECTION_HEADINGS.has(normalized);
 }
 
 function parseCvLayout(text: string): { name: string; role: string; sidebar: CvSection[]; main: CvSection[] } {
   const lines = text.replace(/\r/g, '').split('\n').map((line) => line.trim()).filter(Boolean);
-  const name = lines[0] || 'Professional Profile';
-  const role = lines[1] && !isSectionHeading(lines[1]) ? lines[1] : '';
-  const sections: CvSection[] = [];
-  let current: CvSection = { heading: '', lines: [] };
-  for (const line of lines.slice(role ? 2 : 1)) {
-    if (isSectionHeading(line)) {
-      if (current.heading || current.lines.length) sections.push(current);
-      current = { heading: line.replace(/:$/, '').trim(), lines: [] };
-    } else {
-      current.lines.push(line);
+  const nameIndex = lines.findIndex(isLikelyNameForLayout);
+  const effectiveNameIndex = nameIndex >= 0 ? nameIndex : 0;
+  const name = lines[effectiveNameIndex] || 'Professional Profile';
+  const roleLine = lines[effectiveNameIndex + 1];
+  const role = roleLine && !isSectionHeading(roleLine) ? roleLine : '';
+  const mainStart = effectiveNameIndex + (role ? 2 : 1);
+
+  // PDF text extraction includes the sidebar once per source page. Keep only its first copy.
+  const sidebar: CvSection[] = [];
+  const seenSidebarHeadings = new Set<string>();
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = lines[index]!.replace(/:$/, '').trim();
+    const normalized = heading.toUpperCase();
+    if (!SIDEBAR_SECTIONS.has(normalized) || seenSidebarHeadings.has(normalized)) continue;
+    seenSidebarHeadings.add(normalized);
+    const section: CvSection = { heading, lines: [] };
+    for (let bodyIndex = index + 1; bodyIndex < lines.length; bodyIndex += 1) {
+      const bodyLine = lines[bodyIndex]!;
+      if (isLikelyNameForLayout(bodyLine) || isSectionHeading(bodyLine)) break;
+      section.lines.push(bodyLine);
     }
+    sidebar.push(section);
   }
-  if (current.heading || current.lines.length) sections.push(current);
-  const sidebar = sections.filter((section) => SIDEBAR_SECTIONS.has(section.heading.toUpperCase()));
-  const main = sections.filter((section) => !SIDEBAR_SECTIONS.has(section.heading.toUpperCase()));
-  return { name, role, sidebar, main: main.length ? main : [{ heading: 'PROFILE', lines: lines.slice(1) }] };
+
+  const main: CvSection[] = [];
+  let current: CvSection | null = null;
+  let skippingSidebar = false;
+  for (const line of lines.slice(mainStart)) {
+    if (isSectionHeading(line)) {
+      const heading = line.replace(/:$/, '').trim();
+      if (SIDEBAR_SECTIONS.has(heading.toUpperCase())) {
+        skippingSidebar = true;
+        current = null;
+        continue;
+      }
+      skippingSidebar = false;
+      current = { heading, lines: [] };
+      main.push(current);
+      continue;
+    }
+    if (!skippingSidebar && current) current.lines.push(line);
+  }
+  return { name, role, sidebar, main: main.length ? main : [{ heading: 'PROFILE', lines: lines.slice(mainStart) }] };
+}
+
+function isLikelyNameForLayout(line: string): boolean {
+  const normalized = line.trim();
+  const words = normalized.split(/\s+/);
+  return words.length >= 2 && words.length <= 6 && /^[A-Z][A-Z .'-]+$/.test(normalized) &&
+    !SIDEBAR_SECTIONS.has(normalized.toUpperCase()) && !SECTION_HEADINGS.has(normalized.toUpperCase());
 }
 
 function splitPdfLine(value: string, maxChars: number): string[] {
@@ -302,7 +338,8 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
   ]);
   const backgrounds = await output.embedPdf(templateBuffer, templatePages.map((_, index) => index));
   const layout = parseCvLayout(text);
-  const navy = rgb(0.09, 0.23, 0.34);
+  // Sampled from the uploaded template so the replaced sidebar blocks blend seamlessly.
+  const navy = rgb(23 / 255, 59 / 255, 89 / 255);
   const white = rgb(1, 1, 1);
   const ink = rgb(0.14, 0.19, 0.23);
   const muted = rgb(0.36, 0.41, 0.45);
