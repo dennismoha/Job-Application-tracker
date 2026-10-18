@@ -155,6 +155,14 @@ function parseCvLayout(text: string): { name: string; role: string; sidebar: CvS
   return { name, role, sidebar, main: main.length ? main : [{ heading: 'PROFILE', lines: lines.slice(mainStart) }] };
 }
 
+export function extractCvPreviewSections(text: string): Array<{ heading: string; lines: string[] }> {
+  const layout = parseCvLayout(text);
+  return [...layout.sidebar, ...layout.main].map((section) => ({
+    heading: section.heading,
+    lines: [...section.lines],
+  }));
+}
+
 function isLikelyNameForLayout(line: string): boolean {
   const normalized = line.trim();
   const words = normalized.split(/\s+/);

@@ -4,6 +4,7 @@ import { BadRequestError, UnauthorizedError } from '../../shared/http/http-error
 import { createSourceSchema } from '../sources/source.schemas.js';
 import { sourceService } from '../sources/source.service.js';
 import { cvService } from '../cvs/cv.service.js';
+import { extractCvPreviewSections } from '../cvs/cv-file.service.js';
 import { browserCompanionService } from './browser-companion.service.js';
 import {
   analyzeCompactBrowserPageSchema,
@@ -118,6 +119,17 @@ export const browserCompanionController = {
     try {
       const input = compareCompactBrowserPageSchema.parse(req.body);
       res.status(200).json(await browserCompanionService.comparePage(userId(req), input));
+    } catch (error) {
+      next(error);
+    }
+  },
+  async cvPreviewSource(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const version = await cvService.getVersion(userId(req), routeParam(req, 'versionId'));
+      res.status(200).json({
+        cv: { id: version.cv.id, name: version.cv.name, versionId: version.id, versionNumber: version.versionNumber },
+        sections: extractCvPreviewSections(version.plainText),
+      });
     } catch (error) {
       next(error);
     }

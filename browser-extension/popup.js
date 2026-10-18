@@ -9,6 +9,7 @@ let tailoredPreviewCvVersionId = null;
 let tailoredPreviewBaseCvVersionId = null;
 let tailoredPreviewJobTitle = '';
 let tailoredPreviewObjectUrl = null;
+let tailoredCvSource = null;
 let sourceContext = null;
 let existingContext = null;
 
@@ -913,7 +914,50 @@ async function save(action, includeCv = false) {
   }
 }
 
-function openCvBuilder() {
+function sectionsForPlacement(placement) {
+  const headingSets = {
+    SUMMARY: ['PROFILE', 'SUMMARY', 'PROFESSIONAL SUMMARY'],
+    SKILLS: ['CORE SKILLS', 'SKILLS', 'TECHNICAL SKILLS'],
+    EXPERIENCE: ['TEACHING EXPERIENCE', 'WORK EXPERIENCE', 'EXPERIENCE', 'ADDITIONAL PROFESSIONAL EXPERIENCE'],
+    EDUCATION: ['EDUCATION'],
+    OTHER: [],
+  };
+  const allowed = headingSets[placement] ?? [];
+  const exact = (tailoredCvSource?.sections ?? []).filter((section) => allowed.includes(section.heading.trim().toUpperCase()));
+  return exact.length ? exact : (tailoredCvSource?.sections ?? []).filter((section) =>
+    placement === 'OTHER' || section.heading.toUpperCase().includes(placement),
+  ).slice(0, 1);
+}
+
+function renderGapSectionPreview(card, placement, additionText) {
+  const sections = sectionsForPlacement(placement);
+  const current = card.querySelector('.gap-current-lines');
+  const preview = card.querySelector('.gap-addition-preview');
+  current.replaceChildren();
+  if (!sections.length || !sections.some((section) => section.lines.length)) {
+    const empty = document.createElement('span');
+    empty.textContent = 'No existing section yet. The CV draft can create one.';
+    current.append(empty);
+  } else {
+    for (const section of sections) {
+      const heading = document.createElement('strong');
+      heading.textContent = section.heading;
+      current.append(heading);
+      for (const line of section.lines) {
+        const item = document.createElement('span');
+        item.textContent = line.replace(/^[•●▪]\s*/, '');
+        current.append(item);
+      }
+    }
+  }
+  preview.replaceChildren();
+  const added = document.createElement('span');
+  added.className = 'gap-addition-new';
+  added.textContent = `+ ${additionText.trim() || 'Type the wording you want to add.'}`;
+  preview.append(added);
+}
+
+async function openCvBuilder() {
   if (!currentMatch || !currentCaptureComparison || !captured) {
     setMessage('Compare a CV with this job first so the cached gaps are available.');
     return;
@@ -921,6 +965,12 @@ function openCvBuilder() {
   const cvVersionId = currentMatch.cv?.versionId;
   if (!cvVersionId || cvVersionId !== selectedCvVersionId()) {
     setMessage('Run the comparison again for the currently selected CV version.');
+    return;
+  }
+  try {
+    tailoredCvSource = await api(`/api/browser-companion/cv-preview-source/${encodeURIComponent(cvVersionId)}`);
+  } catch (error) {
+    setMessage(`Could not load this CV's sections: ${error.message}`);
     return;
   }
   document.getElementById('tailored-preview-title').textContent = analysis?.extracted?.title || 'Current job';
@@ -978,7 +1028,45 @@ function openCvBuilder() {
         placement.append(option);
       }
       placementLabel.append(placement);
-      card.append(row, placementLabel);
+
+      const editor = document.createElement('div');
+      editor.className = 'gap-editor';
+      editor.hidden = true;
+      const currentLabel = document.createElement('span');
+      currentLabel.className = 'gap-editor-label';
+      currentLabel.textContent = 'Already in this section';
+      const currentLines = document.createElement('div');
+      currentLines.className = 'gap-current-lines';
+      const additionLabel = document.createElement('label');
+      additionLabel.textContent = 'Wording to add (you can edit this)';
+      const additionInput = document.createElement('textarea');
+      additionInput.className = 'gap-addition-text';
+      additionInput.rows = 2;
+      additionInput.value = item.requirementText;
+      additionLabel.append(additionInput);
+      const previewButton = document.createElement('button');
+      previewButton.type = 'button';
+      previewButton.className = 'gap-preview-button';
+      previewButton.textContent = 'Preview this addition';
+      const additionPreview = document.createElement('div');
+      additionPreview.className = 'gap-addition-preview';
+      additionPreview.hidden = true;
+      const updateSection = () => renderGapSectionPreview(card, placement.value, additionInput.value);
+      checkbox.addEventListener('change', () => { editor.hidden = !checkbox.checked; });
+      placement.addEventListener('change', () => {
+        additionPreview.hidden = true;
+        updateSection();
+      });
+      additionInput.addEventListener('input', () => {
+        if (!additionPreview.hidden) updateSection();
+      });
+      previewButton.addEventListener('click', () => {
+        updateSection();
+        additionPreview.hidden = false;
+      });
+      editor.append(placementLabel, currentLabel, currentLines, additionLabel, previewButton, additionPreview);
+      card.append(row, editor);
+      updateSection();
       list.append(card);
     }
   }
@@ -997,6 +1085,7 @@ async function buildTailoredCvPreview() {
     return {
       requirementText: checkbox.dataset.requirement,
       placement: card.querySelector('.gap-placement').value,
+      additionText: card.querySelector('.gap-addition-text').value.trim(),
     };
   });
   if (!choices.length) return setMessage('Select at least one gap you want to add to the CV.');

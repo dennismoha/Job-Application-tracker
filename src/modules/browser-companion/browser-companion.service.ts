@@ -833,6 +833,7 @@ export const browserCompanionService = {
     selectedRequirements: Array<{
       requirementText: string;
       placement: 'SUMMARY' | 'SKILLS' | 'EXPERIENCE' | 'EDUCATION' | 'OTHER';
+      additionText?: string | undefined;
     }>;
   }) {
     const cacheKey = browserComparisonCacheKey(userId, input.capture, input.cvVersionId);
@@ -861,6 +862,7 @@ export const browserCompanionService = {
         requirement: comparisonItem.requirementText,
         currentStatus: comparisonItem.status,
         placement: choice.placement,
+        ...(choice.additionText?.trim() ? { additionText: choice.additionText.trim() } : {}),
       };
     });
 
@@ -871,7 +873,7 @@ export const browserCompanionService = {
       userId,
       system: [
         'Revise the supplied full CV into a job-targeted draft using only the selected gaps from the cached CV and job comparison.',
-        'The user has reviewed and explicitly selected each requirement, confirming it is a real capability they want represented. Add each selected requirement concisely in its requested CV section.',
+        'The user has reviewed and explicitly selected each requirement, confirming it is a real capability they want represented. Add each selected requirement concisely in its requested CV section. Treat additionText as the user\'s preferred wording; preserve it closely while making only small grammar and formatting edits.',
         'Use the original CV as the source for concrete evidence and details. Do not invent employers, projects, dates, metrics, credentials, achievements, or specific experience examples. Do not imply a specific past role or accomplishment unless it is present in the original CV.',
         'Preserve every other original CV fact. Do not rewrite unrelated sections. Keep a readable plain-text CV with headings and line breaks. Return the complete CV, not a summary.',
         'Return exactly one JSON object: {"draftText":"complete revised CV text"}.',

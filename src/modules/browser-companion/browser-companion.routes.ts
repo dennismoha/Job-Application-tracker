@@ -18,6 +18,7 @@ browserCompanionRouter.get('/sources', requireBrowserCompanion, browserCompanion
 browserCompanionRouter.post('/sources', requireBrowserCompanion, browserCompanionController.createSource);
 browserCompanionRouter.post('/analyze-page', requireBrowserCompanion, browserCompanionController.analyzePage);
 browserCompanionRouter.post('/compare-page', requireBrowserCompanion, browserCompanionController.comparePage);
+browserCompanionRouter.get('/cv-preview-source/:versionId', requireBrowserCompanion, browserCompanionController.cvPreviewSource);
 browserCompanionRouter.post('/build-cv-preview', requireBrowserCompanion, browserCompanionController.buildCvPreview);
 browserCompanionRouter.post('/render-cv-preview', requireBrowserCompanion, browserCompanionController.renderCvPreview);
 browserCompanionRouter.post('/save-cv-preview', requireBrowserCompanion, browserCompanionController.saveCvPreview);

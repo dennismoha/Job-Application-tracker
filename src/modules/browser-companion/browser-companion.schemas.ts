@@ -124,6 +124,7 @@ export const buildCvPreviewSchema = z.object({
   selectedRequirements: z.array(z.object({
     requirementText: z.string().trim().min(1).max(2_000),
     placement: z.enum(['SUMMARY', 'SKILLS', 'EXPERIENCE', 'EDUCATION', 'OTHER']),
+    additionText: z.string().trim().max(2_000).optional(),
   })).min(1).max(30),
 });
 
