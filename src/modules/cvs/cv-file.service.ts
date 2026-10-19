@@ -1,5 +1,7 @@
+
 import { BadRequestError } from '../../shared/http/http-error.js';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDict, PDFName, PDFRawStream } from 'pdf-lib/cjs/core/index.js';
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
@@ -39,7 +41,7 @@ export async function extractTextFromCvUpload(input: {
       const module = await import('pdf-parse');
       const parse = module.default;
       const result = await parse(buffer);
-      const text = result.text?.replace(/\u0000/g, '').trim() ?? '';
+      const text = result.text?.replaceAll(String.fromCharCode(0), '').trim() ?? '';
       if (!text) throw new Error('empty text');
       return { buffer, text, mimeType: 'application/pdf' };
     } catch {
@@ -87,7 +89,14 @@ function pdfEscape(value: string): string {
     .replace(/[\u2013\u2014]/g, '-')
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201c\u201d]/g, '"')
-    .replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\u00FF]/g, '?');
+    .split('')
+    .map((character) => {
+      const code = character.charCodeAt(0);
+      return code === 9 || code === 10 || code === 13 || (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff)
+        ? character
+        : '?';
+    })
+    .join('');
 }
 
 const SIDEBAR_SECTIONS = new Set(['CONTACT', 'BIO DATA', 'CORE SKILLS', 'INTERESTS']);
@@ -111,11 +120,10 @@ function isSectionHeading(line: string): boolean {
 function parseCvLayout(text: string): { name: string; role: string; sidebar: CvSection[]; main: CvSection[] } {
   const lines = text.replace(/\r/g, '').split('\n').map((line) => line.trim()).filter(Boolean);
   const nameIndex = lines.findIndex(isLikelyNameForLayout);
-  const effectiveNameIndex = nameIndex >= 0 ? nameIndex : 0;
-  const name = lines[effectiveNameIndex] || 'Professional Profile';
-  const roleLine = lines[effectiveNameIndex + 1];
+  const name = nameIndex >= 0 ? lines[nameIndex]! : 'Professional Profile';
+  const roleLine = nameIndex >= 0 ? lines[nameIndex + 1] : undefined;
   const role = roleLine && !isSectionHeading(roleLine) ? roleLine : '';
-  const mainStart = effectiveNameIndex + (role ? 2 : 1);
+  const mainStart = nameIndex >= 0 ? nameIndex + (role ? 2 : 1) : 0;
 
   // PDF text extraction includes the sidebar once per source page. Keep only its first copy.
   const sidebar: CvSection[] = [];
@@ -150,9 +158,15 @@ function parseCvLayout(text: string): { name: string; role: string; sidebar: CvS
       main.push(current);
       continue;
     }
-    if (!skippingSidebar && current) current.lines.push(line);
+    if (!skippingSidebar) {
+      if (!current) {
+        current = { heading: 'PROFILE', lines: [] };
+        main.push(current);
+      }
+      current.lines.push(line);
+    }
   }
-  return { name, role, sidebar, main: main.length ? main : [{ heading: 'PROFILE', lines: lines.slice(mainStart) }] };
+  return { name, role, sidebar, main };
 }
 
 export function extractCvPreviewSections(text: string): Array<{ heading: string; lines: string[] }> {
@@ -186,7 +200,56 @@ function splitPdfLine(value: string, maxChars: number): string[] {
   return output.length ? output : [''];
 }
 
-function makeTemplatePage(laidOut: ReturnType<typeof parseCvLayout>, mainSections: CvSection[], firstPage: boolean): string {
+function paginateSimpleSidebar(sections: CvSection[]): CvSection[][] {
+  const pages: CvSection[][] = [[]];
+  let used = 0;
+  let capacity = 600;
+  let pageSection: CvSection | undefined;
+
+  for (const section of sections) {
+    pageSection = undefined;
+    const lines = section.lines.flatMap((sourceLine) => {
+      const bullet = /^[•●▪]/.test(sourceLine);
+      return splitPdfLine(sourceLine, bullet ? 29 : 31).map((line, index) =>
+        `${bullet && index === 0 ? '• ' : ''}${line}`,
+      );
+    });
+    for (const line of lines) {
+      const headingCost = pageSection ? 0 : 17;
+      if (used + headingCost + 11 > capacity && pages[pages.length - 1]!.length) {
+        pages.push([]);
+        used = 0;
+        capacity = 720;
+        pageSection = undefined;
+      }
+      if (!pageSection) {
+        pageSection = { heading: section.heading, lines: [] };
+        pages[pages.length - 1]!.push(pageSection);
+        used += 17;
+      }
+      pageSection.lines.push(line);
+      used += 11;
+    }
+    if (pageSection) used += 6;
+    else {
+      if (used + 23 > capacity && pages[pages.length - 1]!.length) {
+        pages.push([]);
+        used = 0;
+        capacity = 720;
+      }
+      pages[pages.length - 1]!.push({ heading: section.heading, lines: [] });
+      used += 23;
+    }
+  }
+  return pages;
+}
+
+function makeTemplatePage(
+  laidOut: ReturnType<typeof parseCvLayout>,
+  mainSections: CvSection[],
+  sidebarSections: CvSection[],
+  firstPage: boolean,
+): string {
   const ops = [
     'q', '0.09 0.23 0.34 rg', '48 40 140 762 re f', 'Q',
     '0.12 0.29 0.43 rg', '210 40 3 762 re f',
@@ -225,7 +288,7 @@ function makeTemplatePage(laidOut: ReturnType<typeof parseCvLayout>, mainSection
     textAt(100, 721, initials || 'CV', 21, 'F2', '0.09 0.23 0.34');
     ySide = 674;
   }
-  for (const section of laidOut.sidebar) writeSidebar(section);
+  for (const section of sidebarSections) writeSidebar(section);
   if (firstPage) {
     textAt(mainX, yMain, laidOut.name.toUpperCase(), 18, 'F2', '0.09 0.23 0.34');
     yMain -= 17;
@@ -263,29 +326,63 @@ function makeTemplatePage(laidOut: ReturnType<typeof parseCvLayout>, mainSection
 
 export function createSimplePdf(text: string): Buffer {
   const laidOut = parseCvLayout(text);
+  const roleLineCount = laidOut.role
+    ? splitPdfLine(laidOut.role.toUpperCase(), 56).length
+    : 0;
+  const pageLimit = 690;
   const pages: CvSection[][] = [[]];
-  let used = 0;
+  const sidebarPages = paginateSimpleSidebar(laidOut.sidebar);
+  let used = 25 + roleLineCount * 11;
   for (const section of laidOut.main) {
-    const estimate = 30 + section.lines.reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 66)) * 11, 0);
-    if (used + estimate > 700 && pages[pages.length - 1]!.length) {
-      pages.push([]);
-      used = 0;
+    let pageSection: CvSection | undefined;
+    for (const sourceLine of section.lines) {
+      const bullet = /^[•●▪]/.test(sourceLine);
+      const wrapped = splitPdfLine(sourceLine, bullet ? 64 : 68);
+      for (const [index, line] of wrapped.entries()) {
+        const renderedLine = `${bullet && index === 0 ? '• ' : ''}${line}`;
+        const lineCost = 13;
+        const headingCost = pageSection ? 0 : 22;
+        if (used + headingCost + lineCost > pageLimit && pages[pages.length - 1]!.length) {
+          pages.push([]);
+          used = 0;
+          pageSection = undefined;
+        }
+        if (!pageSection) {
+          pageSection = { heading: section.heading, lines: [] };
+          pages[pages.length - 1]!.push(pageSection);
+          used += 22;
+        }
+        pageSection.lines.push(renderedLine);
+        used += lineCost;
+      }
     }
-    pages[pages.length - 1]!.push(section);
-    used += estimate;
+    if (pageSection) used += 7;
+    else if (!section.lines.length) {
+      if (used + 22 > pageLimit && pages[pages.length - 1]!.length) {
+        pages.push([]);
+        used = 0;
+      }
+      pages[pages.length - 1]!.push({ heading: section.heading, lines: [] });
+      used += 22;
+    }
   }
   const objects: string[] = [];
-  const pageIds = pages.map((_, index) => 3 + index * 2);
-  const contentIds = pages.map((_, index) => 4 + index * 2);
-  const fontRegularId = 3 + pages.length * 2;
+  const pageCount = Math.max(pages.length, sidebarPages.length);
+  const pageIds = Array.from({ length: pageCount }, (_, index) => 3 + index * 2);
+  const contentIds = Array.from({ length: pageCount }, (_, index) => 4 + index * 2);
+  const fontRegularId = 3 + pageCount * 2;
   const fontBoldId = fontRegularId + 1;
   objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
-  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`;
-  pages.forEach((sections, index) => {
-    const pageId = pageIds[index]!;
+  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageCount} >>`;
+  pageIds.forEach((pageId, index) => {
     const contentId = contentIds[index]!;
     objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`;
-    const stream = makeTemplatePage(laidOut, sections, index === 0);
+    const stream = makeTemplatePage(
+      laidOut,
+      pages[index] ?? [],
+      sidebarPages[index] ?? [],
+      index === 0,
+    );
     objects[contentId] = `<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\nstream\n${stream}\nendstream`;
   });
   objects[fontRegularId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
@@ -336,7 +433,7 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
   } catch {
     throw new BadRequestError('The original CV PDF template could not be opened.');
   }
-  const templatePages = await template.getPages();
+  const templatePages = template.getPages();
   if (!templatePages.length) throw new BadRequestError('The original CV PDF template has no pages.');
 
   const output = await PDFDocument.create();
@@ -352,14 +449,26 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
   const ink = rgb(0.14, 0.19, 0.23);
   const muted = rgb(0.36, 0.41, 0.45);
   const left = 210;
-  const rightMargin = 29;
-  const sideX = 62;
-  const sideWidth = 112;
+  const sidebarLeft = 48;
+  const sidebarRight = left - 8;
+  const sidebarWidth = sidebarRight - sidebarLeft;
+  const sidebarTextInset = 14;
+  const sideX = sidebarLeft + sidebarTextInset;
+  const sideWidth = sidebarWidth - sidebarTextInset * 2;
   const sideSections = layout.sidebar;
+  const renderedSideSections = sideSections.filter((section) =>
+    ['CORE SKILLS', 'INTERESTS'].includes(section.heading.toUpperCase()),
+  );
   let pageIndex = -1;
   let page!: ReturnType<typeof output.addPage>;
   let yMain = 0;
   let ySide = 0;
+  let sidebarCursor: { sectionIndex: number; lineIndex: number; wrappedLineIndex: number; headingDrawn: boolean } | null = {
+    sectionIndex: 0,
+    lineIndex: 0,
+    wrappedLineIndex: 0,
+    headingDrawn: false,
+  };
 
   const addPage = (first = false) => {
     pageIndex += 1;
@@ -372,41 +481,70 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
     if (first) {
       // The template's first-page portrait occupies the top of the sidebar; preserve it.
       // Keep the original contact and bio-data block exactly beneath the portrait.
-      page.drawRectangle({ x: 48, y: 40, width: 140, height: 479, color: navy });
+      page.drawRectangle({
+        x: sidebarLeft,
+        y: 40,
+        width: sidebarWidth,
+        height: 479,
+        color: navy,
+      });
       ySide = 510;
     } else {
-      // Keep the repeated contact and bio-data at the top of the original continuation rail.
-      page.drawRectangle({ x: 48, y: 40, width: 140, height: 640, color: navy });
-      ySide = 667;
+      // Replace the source sidebar completely so its repeated personal details cannot show through.
+      page.drawRectangle({
+        x: sidebarLeft,
+        y: 40,
+        width: sidebarWidth,
+        height: sourceSize.height - 48,
+        color: navy,
+      });
+      ySide = sourceSize.height - 54;
     }
     yMain = sourceSize.height - 54;
     return page;
   };
 
-  const drawSidebar = (sections: CvSection[]) => {
-    for (const section of sections) {
-      if (ySide < 56) break;
-      ySide -= 4;
-      page.drawText(safePdfText(section.heading.toUpperCase()), { x: sideX, y: ySide, size: 9, font: bold, color: white });
-      ySide -= 14;
-      for (const sourceLine of section.lines) {
+  const drawSidebar = () => {
+    while (sidebarCursor && sidebarCursor.sectionIndex < renderedSideSections.length) {
+      const section = renderedSideSections[sidebarCursor.sectionIndex]!;
+      if (!sidebarCursor.headingDrawn) {
+        if (ySide < 56) return;
+        ySide -= 4;
+        page.drawText(safePdfText(section.heading.toUpperCase()), {
+          x: sideX, y: ySide, size: 9, font: bold, color: white,
+        });
+        ySide -= 14;
+        sidebarCursor.headingDrawn = true;
+      }
+      while (sidebarCursor.lineIndex < section.lines.length) {
+        const sourceLine = section.lines[sidebarCursor.lineIndex]!;
         const bullet = /^[•●▪]/.test(sourceLine);
         const content = sourceLine.replace(/^[•●▪]\s*/, '');
-        for (const [lineIndex, line] of wrapForFont(content, regular, 7.1, sideWidth - (bullet ? 6 : 0)).entries()) {
+        const wrapped = wrapForFont(content, regular, 7.1, sideWidth - (bullet ? 6 : 0));
+        while (sidebarCursor.wrappedLineIndex < wrapped.length) {
           if (ySide < 52) return;
-          page.drawText(`${bullet && lineIndex === 0 ? '• ' : ''}${line}`, {
+          const lineIndex = sidebarCursor.wrappedLineIndex;
+          page.drawText(`${bullet && lineIndex === 0 ? '• ' : ''}${wrapped[lineIndex]}`, {
             x: sideX, y: ySide, size: 7.1, font: regular, color: white,
           });
           ySide -= 9;
+          sidebarCursor.wrappedLineIndex += 1;
         }
         ySide -= 2;
+        sidebarCursor.lineIndex += 1;
+        sidebarCursor.wrappedLineIndex = 0;
       }
       ySide -= 6;
+      sidebarCursor.sectionIndex += 1;
+      sidebarCursor.lineIndex = 0;
+      sidebarCursor.wrappedLineIndex = 0;
+      sidebarCursor.headingDrawn = false;
     }
+    sidebarCursor = null;
   };
 
   addPage(true);
-  drawSidebar(sideSections.filter((section) => ['CORE SKILLS', 'INTERESTS'].includes(section.heading.toUpperCase())));
+  drawSidebar();
   page.drawText(safePdfText(layout.name.toUpperCase()), { x: left, y: yMain, size: 18, font: bold, color: navy });
   yMain -= 18;
   if (layout.role) {
@@ -417,16 +555,10 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
   }
   yMain -= 10;
 
-  const startContinuationPage = (continuedHeading?: string) => {
+  const startContinuationPage = () => {
     addPage(false);
-    drawSidebar(sideSections.filter((section) => ['CORE SKILLS', 'INTERESTS'].includes(section.heading.toUpperCase())));
+    drawSidebar();
     yMain = output.getPages()[output.getPageCount() - 1]!.getHeight() - 52;
-    if (continuedHeading) {
-      page.drawText(`${safePdfText(continuedHeading.toUpperCase())} (CONTINUED)`, {
-        x: left, y: yMain, size: 10, font: bold, color: navy,
-      });
-      yMain -= 17;
-    }
   };
 
   for (const section of layout.main) {
@@ -442,7 +574,7 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
       const size = roleLine ? 8.4 : 8.1;
       const lines = wrapForFont(content, font, size, 345 - (bullet ? 8 : 0));
       for (const [lineIndex, line] of lines.entries()) {
-        if (yMain < 55) startContinuationPage(section.heading);
+        if (yMain < 55) startContinuationPage();
         const prefix = bullet && lineIndex === 0 ? '• ' : '';
         page.drawText(`${prefix}${line}`, {
           x: left + (bullet ? 3 : 0), y: yMain, size, font, color: ink,
@@ -452,6 +584,10 @@ export async function createCvPdfFromTemplate(text: string, templateBuffer: Buff
       yMain -= bullet ? 1.5 : 3;
     }
     yMain -= 8;
+  }
+
+  while (sidebarCursor) {
+    startContinuationPage();
   }
 
   return Buffer.from(await output.save());
@@ -531,6 +667,330 @@ function zipStore(files: Array<{ name: string; data: Buffer }>): Buffer {
   return Buffer.concat([...locals, centralDirectory, end]);
 }
 
+function htmlEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderHtmlSection(section: CvSection, sidebar = false): string {
+  const isExperienceSection = ['EXPERIENCE', 'WORK EXPERIENCE', 'TEACHING EXPERIENCE', 'ADDITIONAL PROFESSIONAL EXPERIENCE']
+    .includes(section.heading.toUpperCase());
+  const lines = section.lines.map((line) => {
+    const hasBullet = /^[•●▪-]\s*/.test(line);
+    const isRoleLine = !sidebar && !hasBullet && line.includes('|');
+    const isBullet = hasBullet || (isExperienceSection && !isRoleLine);
+    const content = isBullet ? line.replace(/^[•●▪-]\s*/, '') : line;
+    return `<p class="${isBullet ? 'bullet' : isRoleLine ? 'role-line' : 'copy'}">${htmlEscape(content)}</p>`;
+  }).join('');
+  return `<section class="${sidebar ? 'sidebar-section' : 'main-section'}"><h2>${htmlEscape(section.heading)}</h2>${lines}</section>`;
+}
+
+function extractPortraitJpeg(template: PDFDocument): Buffer | undefined {
+  const candidates: Array<{ data: Buffer; area: number }> = [];
+  try {
+    for (const page of template.getPages()) {
+      const resources = page.node.Resources();
+      const xObjects = resources?.lookup(PDFName.of('XObject'), PDFDict);
+      if (!xObjects) continue;
+      for (const key of xObjects.keys()) {
+        const image = xObjects.lookup(key);
+        if (!(image instanceof PDFRawStream)) continue;
+        if (image.dict.lookup(PDFName.of('Subtype'))?.toString() !== '/Image') continue;
+        if (image.dict.lookup(PDFName.of('Filter'))?.toString() !== '/DCTDecode') continue;
+        const imageWidth = image.dict.lookup(PDFName.of('Width'));
+        const imageHeight = image.dict.lookup(PDFName.of('Height'));
+        if (!imageWidth || !imageHeight) continue;
+        const width = Number(imageWidth.toString());
+        const height = Number(imageHeight.toString());
+        const ratio = width / height;
+        if (width < 100 || height < 100 || ratio < 0.55 || ratio > 1.2) continue;
+        candidates.push({ data: Buffer.from(image.getContents()), area: width * height });
+      }
+    }
+  } catch {
+    // Portrait extraction is optional; unsupported PDF image structures should
+    // still allow the HTML renderer to produce a preview with its placeholder.
+    return undefined;
+  }
+  // CV portraits tend to be the smallest near-square JPEG in a template; ignore
+  // full-page scans and wide decorative images when selecting the candidate.
+  return candidates.sort((a, b) => a.area - b.area)[0]?.data;
+}
+
+/**
+ * Render a CV with HTML and print CSS, using the supplied PDF for its page dimensions.
+ * This is intentionally separate from createCvPdfFromTemplate so callers can compare
+ * the HTML renderer with the legacy PDF overlay renderer before switching over.
+ */
+export async function createCvPdfFromHtmlTemplate(
+  text: string,
+  templateBuffer: Buffer,
+  portrait?: { buffer: Buffer; mimeType: 'image/jpeg' | 'image/png' },
+): Promise<Buffer> {
+  let template: PDFDocument;
+  try {
+    template = await PDFDocument.load(templateBuffer);
+  } catch {
+    throw new BadRequestError('The original CV PDF template could not be opened.');
+  }
+  const firstPage = template.getPage(0);
+  if (!firstPage) throw new BadRequestError('The original CV PDF template has no pages.');
+  const { width, height } = firstPage.getSize();
+  const portraitImage = portrait ?? (() => {
+    const data = extractPortraitJpeg(template);
+    return data ? { buffer: data, mimeType: 'image/jpeg' as const } : undefined;
+  })();
+  const layout = parseCvLayout(text);
+  const sidebar = layout.sidebar
+    .filter(({ heading }) => ['CONTACT', 'BIO DATA', 'CORE SKILLS', 'INTERESTS'].includes(heading.toUpperCase()))
+    .map((section) => renderHtmlSection(section, true)).join('');
+  const main = layout.main.map((section) => renderHtmlSection(section)).join('');
+  const portraitMarkup = portraitImage
+    ? `<img class="portrait-image" src="data:${portraitImage.mimeType};base64,${portraitImage.buffer.toString('base64')}" alt="CV portrait">`
+    : '<div class="portrait-placeholder" aria-hidden="true"></div>';
+  //   const html = `<!doctype html>
+  // <html lang="en"><head><meta charset="utf-8"><style>
+  //   @page { size: ${width}pt ${height}pt; margin: 18pt 0 0; }
+  //   * { box-sizing: border-box; }
+  //   html, body { margin: 0; padding: 0; }
+  //   body { color: #202b35; font-family: Georgia, 'Times New Roman', serif; font-size: 9.6pt; line-height: 1.24; }
+  //   body::before { content: ''; position: fixed; z-index: -1; inset: 0 auto 0 6.54%; width: 26.47%; background: #173b59; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  //   .cv { display: grid; grid-template-columns: 29% 71%; align-items: start; min-height: ${height - 18}pt; padding: 12pt 28pt 34pt; }
+  //   .sidebar { color: #fff; background: #173b59; margin-left: 12pt; padding: 0 13pt 18pt 8pt; }
+  //   .portrait-frame { height: 205pt; margin: -12pt -25pt 21pt -8pt; padding: 28pt; background: #e8edf1; display: grid; place-items: center; }
+  //   .portrait-image { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+  //   .portrait-placeholder { width: 100%; height: 100%; background: #fff; }
+  //   .main { background: #fff; padding: 0 0 0 10pt; min-width: 0; }
+  //   h1 { color: #173b59; font-family: Georgia, 'Times New Roman', serif; font-size: 23pt; font-weight: 400; letter-spacing: .15pt; line-height: 1.08; margin: 0 0 7pt; text-transform: uppercase; }
+  //   .role { color: #496b86; font-size: 12.5pt; margin: 0 0 10pt; text-transform: uppercase; }
+  //   h2 { color: #173b59; font-family: Georgia, 'Times New Roman', serif; font-size: 11.5pt; font-weight: 400; line-height: 1.15; margin: 8pt 0 3.5pt; text-transform: uppercase; break-after: avoid-page; }
+  //   .sidebar h2 { color: #fff; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; margin-top: 0; }
+  //   p { margin: 0 0 2.2pt; overflow-wrap: anywhere; orphans: 2; widows: 2; }
+  //   .bullet { position: relative; padding-left: 9pt; }
+  //   .bullet::before { content: '•'; position: absolute; left: 0; }
+  //   .sidebar p { color: #fff; margin-bottom: 2.2pt; }
+  //   .sidebar-section { margin-bottom: 15pt; break-inside: avoid-page; }
+  //   .main-section { break-inside: auto; }
+  //   .main-section .role-line { font-weight: 700; margin-top: 5pt; margin-bottom: 2.5pt; break-after: avoid-page; }
+  //   .main-section .bullet { font-weight: 400; }
+  //   @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+  // </style></head><body><div class="cv">
+  //   <aside class="sidebar"><div class="portrait-frame">${portraitMarkup}</div>${sidebar}</aside>
+  //   <main class="main"><h1>${htmlEscape(layout.name)}</h1>${layout.role ? `<p class="role">${htmlEscape(layout.role)}</p>` : ''}${main}</main>
+  // </div></body></html>`;
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {
+      size: ${width}pt ${height}pt;
+      margin: 18pt 0 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      color: #202b35;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 9.6pt;
+      line-height: 1.24;
+    }
+
+    /*
+     * Sidebar background:
+     * Keep a visible margin on the left instead of extending
+     * the navy background across the entire left side.
+     */
+    body::before {
+      content: '';
+      position: fixed;
+      z-index: -1;
+      top: 0;
+      bottom: 0;
+      left: 6.54%;
+      width: 24.5%;
+      background: #173b59;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    .cv {
+      display: grid;
+      grid-template-columns: 29% 71%;
+      align-items: start;
+      min-height: ${height - 18}pt;
+      padding: 12pt 28pt 34pt;
+    }
+
+    .sidebar {
+      color: #fff;
+      background: transparent;
+      margin-left: 3pt;
+      padding: 0 13pt 18pt 30pt;
+    }
+
+    .portrait-frame {
+      height: 205pt;
+      margin: -12pt -12pt 21pt 0;
+      padding: 28pt;
+      background: #e8edf1;
+      display: grid;
+      place-items: center;
+    }
+
+    .portrait-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .portrait-placeholder {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+    }
+
+    .main {
+      background: #fff;
+      padding: 0 0 0 10pt;
+      min-width: 0;
+    }
+
+    h1 {
+      color: #173b59;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 23pt;
+      font-weight: 400;
+      letter-spacing: .15pt;
+      line-height: 1.08;
+      margin: 0 0 7pt;
+      text-transform: uppercase;
+    }
+
+    .role {
+      color: #496b86;
+      font-size: 12.5pt;
+      margin: 0 0 10pt;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      color: #173b59;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11.5pt;
+      font-weight: 400;
+      line-height: 1.15;
+      margin: 8pt 0 3.5pt;
+      text-transform: uppercase;
+      break-after: avoid-page;
+    }
+
+    .sidebar h2 {
+      color: #fff;
+      font-family: Arial, sans-serif;
+      font-size: 9pt;
+      font-weight: 700;
+      margin-top: 0;
+    }
+
+    p {
+      margin: 0 0 2.2pt;
+      overflow-wrap: anywhere;
+      orphans: 2;
+      widows: 2;
+    }
+
+    .bullet {
+      position: relative;
+      padding-left: 9pt;
+    }
+
+    .bullet::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+    }
+
+    .sidebar p {
+      color: #fff;
+      margin-bottom: 2.2pt;
+    }
+
+    .sidebar-section {
+      margin-bottom: 15pt;
+      break-inside: avoid-page;
+    }
+
+    .main-section {
+      break-inside: auto;
+    }
+
+    .main-section .role-line {
+      font-weight: 700;
+      margin-top: 5pt;
+      margin-bottom: 2.5pt;
+      break-after: avoid-page;
+    }
+
+    .main-section .bullet {
+      font-weight: 400;
+    }
+
+    @media print {
+      * {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="cv">
+    <aside class="sidebar">
+      <div class="portrait-frame">
+        ${portraitMarkup}
+      </div>
+      ${sidebar}
+    </aside>
+
+    <main class="main">
+      <h1>${htmlEscape(layout.name)}</h1>
+      ${layout.role
+      ? `<p class="role">${htmlEscape(layout.role)}</p>`
+      : ''
+    }
+      ${main}
+    </main>
+  </div>
+</body>
+</html>`;
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: Math.ceil(width), height: Math.ceil(height) } });
+    await page.setContent(html, { waitUntil: 'load' });
+    return Buffer.from(await page.pdf({ printBackground: true, preferCSSPageSize: true }));
+  } finally {
+    await browser.close();
+  }
+}
+
 function xmlEscape(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -562,3 +1022,4 @@ export function createSimpleDocx(text: string): Buffer {
   ];
   return zipStore(files);
 }
+

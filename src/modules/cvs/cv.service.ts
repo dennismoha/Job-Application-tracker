@@ -12,7 +12,7 @@ import { BadRequestError, NotFoundError } from '../../shared/http/http-error.js'
 import { prisma } from '../../shared/prisma/prisma-client.js';
 import { aiClient } from '../ai/ai-client.js';
 import { createCvPreviewUrl, deleteCvOriginal, uploadCvOriginal } from './cv-cloudinary.service.js';
-import { createCvPdfFromTemplate, createSimpleDocx, createSimplePdf, extractTextFromCvUpload } from './cv-file.service.js';
+import { createCvPdfFromHtmlTemplate, createCvPdfFromTemplate, createSimpleDocx, createSimplePdf, extractTextFromCvUpload } from './cv-file.service.js';
 import {
   compareRequirementToCv,
   extractRequirementsFromDescription,
@@ -394,9 +394,9 @@ export const cvService = {
     const base = await ownedVersion(userId, input.cvVersionId);
     const match = input.matchId
       ? await prisma.jobCvMatch.findFirst({
-          where: { id: input.matchId, userId, jobId: input.jobId, cvVersionId: input.cvVersionId },
-          include: { items: true, job: { include: { company: true } }, cvVersion: true },
-        })
+        where: { id: input.matchId, userId, jobId: input.jobId, cvVersionId: input.cvVersionId },
+        include: { items: true, job: { include: { company: true } }, cvVersion: true },
+      })
       : await compare(userId, input.jobId, input.cvVersionId, false);
     if (!match) throw new NotFoundError('CV comparison not found.');
 
@@ -569,7 +569,8 @@ export const cvService = {
         orderBy: { versionNumber: 'asc' },
       }).then((source) => source?.originalFileData ? Buffer.from(source.originalFileData) : null);
     return template
-      ? createCvPdfFromTemplate(input.draftText, template)
+      // ? createCvPdfFromTemplate(input.draftText, template)
+      ? createCvPdfFromHtmlTemplate(input.draftText, template)
       : createSimplePdf(input.draftText);
   },
 };
