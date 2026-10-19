@@ -42,6 +42,13 @@ interface SourceAnalysis {
   emailAlertsAvailable: boolean;
   accessState: string;
 }
+interface UrlVerification {
+  exists: boolean;
+  statusCode: number | null;
+  message: string;
+  redirected: boolean;
+  finalUrl?: string | null;
+}
 
 function human(value?: string | null): string {
   return (value ?? 'UNKNOWN')
@@ -74,6 +81,15 @@ function fmt(value?: string | null): string {
   return value ? new Date(value).toLocaleString() : '—';
 }
 
+function safeHttpUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function AddSourceModal({
   onClose,
   onSaved,
@@ -90,7 +106,7 @@ function AddSourceModal({
   const [url, setUrl] = useState(initialUrl);
   const [sourceType, setSourceType] = useState('JOB_BOARD');
   const [analysis, setAnalysis] = useState<SourceAnalysis | null>(null);
-  const [verification, setVerification] = useState<any | null>(null);
+  const [verification, setVerification] = useState<UrlVerification | null>(null);
   const [existingSource, setExistingSource] = useState<{ id: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
   async function analyze() {
@@ -98,11 +114,14 @@ function AddSourceModal({
     setBusy(true);
     try {
       const [v, r, a] = await Promise.all([
-        api<{ verification: any }>('/api/sources/verify', {
+        api<{ verification: UrlVerification }>('/api/sources/verify', {
           method: 'POST',
           body: JSON.stringify({ url }),
         }),
-        api<any>('/api/sources/resolve', { method: 'POST', body: JSON.stringify({ url }) }),
+        api<{ source?: { id: string; name: string } | null; suggestedBaseUrl?: string }>(
+          '/api/sources/resolve',
+          { method: 'POST', body: JSON.stringify({ url }) },
+        ),
         api<{ analysis: SourceAnalysis }>('/api/sources/analyze', {
           method: 'POST',
           body: JSON.stringify({ url }),
@@ -570,9 +589,29 @@ export default function JobSites({
                       SYSTEM
                     </span>
                   )}
-                  <div className="mono" style={{ marginTop: 3, color: '#334155', fontSize: 9 }}>
-                    {s.careersUrl ?? s.baseUrl}
-                  </div>
+                  {safeHttpUrl(s.baseUrl) && (
+                    <a
+                      href={safeHttpUrl(s.baseUrl)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                      title={`Open ${s.baseUrl} in a new tab`}
+                      className="mono"
+                      style={{
+                        display: 'inline-block',
+                        marginTop: 5,
+                        padding: '3px 6px',
+                        color: '#60a5fa',
+                        background: 'rgba(59,130,246,.08)',
+                        border: '1px solid rgba(59,130,246,.2)',
+                        borderRadius: 3,
+                        fontSize: 9,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {s.baseUrl} ↗
+                    </a>
+                  )}
                 </td>
                 <td style={{ padding: '10px 16px' }}>
                   <span style={badge(s.sourceType)}>{human(s.sourceType)}</span>
