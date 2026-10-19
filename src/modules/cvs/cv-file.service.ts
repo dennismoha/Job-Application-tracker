@@ -679,13 +679,26 @@ function htmlEscape(value: string): string {
 function renderHtmlSection(section: CvSection, sidebar = false): string {
   const isExperienceSection = ['EXPERIENCE', 'WORK EXPERIENCE', 'TEACHING EXPERIENCE', 'ADDITIONAL PROFESSIONAL EXPERIENCE']
     .includes(section.heading.toUpperCase());
-  const lines = section.lines.map((line) => {
+  const entries: Array<{ className: 'bullet' | 'role-line' | 'copy'; text: string }> = [];
+  for (const line of section.lines) {
     const hasBullet = /^[•●▪-]\s*/.test(line);
-    const isRoleLine = !sidebar && !hasBullet && line.includes('|');
-    const isBullet = hasBullet || (isExperienceSection && !isRoleLine);
-    const content = isBullet ? line.replace(/^[•●▪-]\s*/, '') : line;
-    return `<p class="${isBullet ? 'bullet' : isRoleLine ? 'role-line' : 'copy'}">${htmlEscape(content)}</p>`;
-  }).join('');
+    const content = hasBullet ? line.replace(/^[•●▪-]\s*/, '') : line;
+    const isRoleLine = !sidebar && content.includes('|');
+    if (hasBullet && !isRoleLine) {
+      entries.push({ className: 'bullet', text: content });
+    } else if (isRoleLine) {
+      entries.push({ className: 'role-line', text: content });
+    } else if (isExperienceSection && entries.at(-1)?.className === 'bullet') {
+      // A wrapped responsibility line has no marker in extracted PDF text;
+      // append it to the preceding item so it remains one bullet point.
+      entries.at(-1)!.text += ` ${content}`;
+    } else {
+      entries.push({ className: 'copy', text: content });
+    }
+  }
+  const lines = entries
+    .map(({ className, text }) => `<p class="${className}">${htmlEscape(text)}</p>`)
+    .join('');
   return `<section class="${sidebar ? 'sidebar-section' : 'main-section'}"><h2>${htmlEscape(section.heading)}</h2>${lines}</section>`;
 }
 
