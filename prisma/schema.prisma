@@ -1608,6 +1608,18 @@ model CvVersion {
   @@index([cvId, createdAt])
 }
 
+model CvAssetDeletion {
+  id String @id @default(cuid())
+  publicId String @unique
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nextAttemptAt, createdAt])
+}
+
 model CvProfileLink {
   id String @id @default(cuid())
 

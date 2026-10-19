@@ -7,6 +7,7 @@ export const cvRouter = Router();
 cvRouter.use(requireUser);
 
 cvRouter.get('/', cvController.list);
+cvRouter.get('/archived', cvController.listArchived);
 cvRouter.post('/', cvController.create);
 cvRouter.post('/upload', cvController.upload);
 cvRouter.get('/versions/:versionId', cvController.getVersion);
@@ -21,4 +22,7 @@ cvRouter.post('/tailoring/:sessionId/save', cvController.saveTailored);
 cvRouter.patch('/tailoring/suggestions/:suggestionId', cvController.updateSuggestion);
 cvRouter.get('/:cvId', cvController.get);
 cvRouter.patch('/:cvId', cvController.update);
+cvRouter.post('/:cvId/archive', cvController.archive);
+cvRouter.post('/:cvId/restore', cvController.restore);
+cvRouter.delete('/:cvId', cvController.remove);
 cvRouter.post('/:cvId/profile-links', cvController.linkProfile);
