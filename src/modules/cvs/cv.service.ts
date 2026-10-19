@@ -260,9 +260,9 @@ async function suggestionsForMatch(userId: string, match: Awaited<ReturnType<typ
 }
 
 export const cvService = {
-  async list(userId: string, profileId?: string) {
+  async list(userId: string, profileId?: string, archived = false) {
     const cvs = await prisma.cv.findMany({
-      where: { userId, archived: false },
+      where: { userId, archived },
       include: {
         versions: { orderBy: { versionNumber: 'desc' }, take: 1 },
         profileLinks: { include: { profile: { select: { id: true, name: true } } } },
@@ -366,6 +366,30 @@ export const cvService = {
     if (input.isMaster) await prisma.cv.updateMany({ where: { userId, isMaster: true, id: { not: cvId } }, data: { isMaster: false } });
     await prisma.cv.update({ where: { id: cvId }, data: input });
     return ownedCv(userId, cvId);
+  },
+
+  async archive(userId: string, cvId: string) {
+    return cvService.update(userId, cvId, { archived: true });
+  },
+
+  async restore(userId: string, cvId: string) {
+    return cvService.update(userId, cvId, { archived: false });
+  },
+
+  async remove(userId: string, cvId: string) {
+    const cv = await ownedCv(userId, cvId);
+    const publicIds = [...new Set(cv.versions.flatMap((version) => version.cloudinaryPublicId ? [version.cloudinaryPublicId] : []))];
+    await prisma.$transaction(async (tx) => {
+      if (publicIds.length) {
+        await tx.cvAssetDeletion.createMany({
+          data: publicIds.map((publicId) => ({ publicId })),
+          skipDuplicates: true,
+        });
+      }
+      const result = await tx.cv.deleteMany({ where: { id: cvId, userId } });
+      if (result.count !== 1) throw new NotFoundError('CV not found.');
+    });
+    return { id: cvId, deleted: true };
   },
 
   async linkProfile(userId: string, cvId: string, profileId: string, isDefault: boolean) {

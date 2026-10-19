@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 
 import { api, apiBlob, downloadBlob } from '../api/client';
 import { EmptyState, FileUploader } from '../components/UI';
@@ -519,6 +520,8 @@ export default function CVs({
   const toast = useToast();
   const [cvs, setCvs] = useState<CvSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
+  const [cvActionId, setCvActionId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [preview, setPreview] = useState<VersionDetail | null>(null);
   const [history, setHistory] = useState<CvSummary | null>(null);
@@ -536,8 +539,10 @@ export default function CVs({
   async function load() {
     setLoading(true);
     try {
+      const path = showArchived ? '/api/cvs/archived' : '/api/cvs';
+      const query = activeProfileId ? `?profileId=${encodeURIComponent(activeProfileId)}` : '';
       const r = await api<{ cvs: CvSummary[] }>(
-        `/api/cvs${activeProfileId ? `?profileId=${encodeURIComponent(activeProfileId)}` : ''}`,
+        `${path}${query}`,
       );
       setCvs(r.cvs);
     } catch (c) {
@@ -548,7 +553,7 @@ export default function CVs({
   }
   useEffect(() => {
     void load();
-  }, [activeProfileId]);
+  }, [activeProfileId, showArchived]);
   useEffect(() => {
     if (tailoringId) localStorage.setItem('active-cv-tailoring-session', tailoringId);
   }, [tailoringId]);
@@ -632,6 +637,31 @@ export default function CVs({
       await load();
     } catch (c) {
       toast.error(c instanceof Error ? c.message : 'Could not update default.');
+    }
+  }
+  async function setArchived(cv: CvSummary, archived: boolean) {
+    setCvActionId(cv.id);
+    try {
+      await api(`/api/cvs/${cv.id}/${archived ? 'archive' : 'restore'}`, { method: 'POST' });
+      toast.success(archived ? 'CV archived.' : 'CV restored.');
+      await load();
+    } catch (c) {
+      toast.error(c instanceof Error ? c.message : `Could not ${archived ? 'archive' : 'restore'} CV.`);
+    } finally {
+      setCvActionId(null);
+    }
+  }
+  async function deleteCv(cv: CvSummary) {
+    if (!window.confirm(`Permanently delete “${cv.name}”? This removes the CV, its versions, job-match results, and tailoring sessions. Application records will remain without a linked CV version.`)) return;
+    setCvActionId(cv.id);
+    try {
+      await api(`/api/cvs/${cv.id}`, { method: 'DELETE' });
+      toast.success('CV permanently deleted.');
+      await load();
+    } catch (c) {
+      toast.error(c instanceof Error ? c.message : 'Could not delete CV.');
+    } finally {
+      setCvActionId(null);
     }
   }
   const defaultByProfile = useMemo(
@@ -1085,7 +1115,27 @@ export default function CVs({
             tailoring.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 7 }}>
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 4, marginRight: 5 }}>
+            {([false, true] as const).map((archived) => (
+              <button
+                key={String(archived)}
+                type="button"
+                aria-pressed={showArchived === archived}
+                onClick={() => setShowArchived(archived)}
+                style={{
+                  padding: '7px 9px',
+                  background: showArchived === archived ? '#1a2540' : 'transparent',
+                  border: '1px solid #1a2540',
+                  borderRadius: 4,
+                  color: showArchived === archived ? '#e2e8f0' : '#64748b',
+                  cursor: 'pointer',
+                }}
+              >
+                {archived ? 'Archived' : 'Active'}
+              </button>
+            ))}
+          </div>
           {tailoringId && (
             <button
               onClick={() => setTailoringId(tailoringId)}
@@ -1169,21 +1219,23 @@ export default function CVs({
         <div className="data-card" style={{ borderRadius: 6 }}>
           <EmptyState
             icon="▤"
-            title="No CVs yet"
-            desc="Upload your current CV or create a master CV. Every later tailored application version will remain traceable."
+            title={showArchived ? 'No archived CVs' : 'No CVs yet'}
+            desc={showArchived ? 'CVs you archive will appear here, where you can restore or permanently delete them.' : 'Upload your current CV or create a master CV. Every later tailored application version will remain traceable.'}
             action={
-              <button
-                onClick={() => setAddOpen(true)}
-                style={{
-                  padding: '7px 12px',
-                  background: '#3b82f6',
-                  border: 0,
-                  borderRadius: 4,
-                  color: '#fff',
-                }}
-              >
-                Add your first CV
-              </button>
+              showArchived ? undefined : (
+                <button
+                  onClick={() => setAddOpen(true)}
+                  style={{
+                    padding: '7px 12px',
+                    background: '#3b82f6',
+                    border: 0,
+                    borderRadius: 4,
+                    color: '#fff',
+                  }}
+                >
+                  Add your first CV
+                </button>
+              )
             }
           />
         </div>
@@ -1216,6 +1268,9 @@ export default function CVs({
                         >
                           MASTER
                         </span>
+                      )}
+                      {cv.archived && (
+                        <span className="mono" style={{ fontSize: 8, color: '#fbbf24' }}>ARCHIVED</span>
                       )}
                     </div>
                     <div style={{ fontSize: 10, color: '#475569', marginTop: 3 }}>
@@ -1321,7 +1376,7 @@ export default function CVs({
                     </button>
                   </div>
                 )}
-                {profiles.length > 0 && (
+                {!showArchived && profiles.length > 0 && (
                   <select
                     defaultValue=""
                     onChange={(e) =>
@@ -1346,6 +1401,22 @@ export default function CVs({
                     ))}
                   </select>
                 )}
+                <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 9, borderTop: '1px solid #1a2540' }}>
+                  {showArchived ? (
+                    <>
+                      <button disabled={cvActionId === cv.id} onClick={() => void setArchived(cv, false)} style={{ padding: '5px 8px', background: 'none', border: '1px solid #1a2540', color: '#06d6a0', borderRadius: 4, cursor: 'pointer' }}>
+                        {cvActionId === cv.id ? 'Working…' : 'Restore'}
+                      </button>
+                      <button disabled={cvActionId === cv.id} onClick={() => void deleteCv(cv)} style={{ padding: '5px 8px', background: 'none', border: '1px solid rgba(248,113,113,.35)', color: '#f87171', borderRadius: 4, cursor: 'pointer' }}>
+                        Delete permanently
+                      </button>
+                    </>
+                  ) : (
+                    <button disabled={cvActionId === cv.id} onClick={() => void setArchived(cv, true)} style={{ padding: '5px 8px', background: 'none', border: '1px solid #1a2540', color: '#fbbf24', borderRadius: 4, cursor: 'pointer' }}>
+                      {cvActionId === cv.id ? 'Working…' : 'Archive'}
+                    </button>
+                  )}
+                </div>
               </article>
             );
           })}

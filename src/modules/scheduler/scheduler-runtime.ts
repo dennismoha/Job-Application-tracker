@@ -3,9 +3,11 @@ import { jobLifecycleService } from '../jobs/job-lifecycle.service.js';
 import { acquisitionRunService } from './acquisition-run.service.js';
 import { sourceScheduleService } from './source-schedule.service.js';
 import { crawlerConfigService } from './crawler-config.service.js';
+import { processCvAssetDeletions } from '../cvs/cv-asset-deletion.service.js';
 
 let schedulerTimer: NodeJS.Timeout | undefined;
 let workerTimer: NodeJS.Timeout | undefined;
+let cvAssetDeletionTimer: NodeJS.Timeout | undefined;
 let workerBusy = false;
 
 async function schedulerTick(): Promise<void> {
@@ -39,6 +41,15 @@ async function workerTick(): Promise<void> {
 }
 
 export function startSchedulerRuntime(): void {
+  void processCvAssetDeletions().catch((error) => {
+    console.error('CV asset cleanup tick failed.', error);
+  });
+  cvAssetDeletionTimer = setInterval(() => {
+    void processCvAssetDeletions().catch((error) => {
+      console.error('CV asset cleanup tick failed.', error);
+    });
+  }, env.WORKER_TICK_MS);
+
   if (!env.SCHEDULER_ENABLED) return;
 
   void schedulerTick();
@@ -51,4 +62,5 @@ export function startSchedulerRuntime(): void {
 export function stopSchedulerRuntime(): void {
   if (schedulerTimer) clearInterval(schedulerTimer);
   if (workerTimer) clearInterval(workerTimer);
+  if (cvAssetDeletionTimer) clearInterval(cvAssetDeletionTimer);
 }

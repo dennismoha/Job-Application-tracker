@@ -33,6 +33,10 @@ export const cvController = {
     try { res.status(200).json({ cvs: await cvService.list(userId(req), typeof req.query.profileId === 'string' ? req.query.profileId : undefined) }); }
     catch (error) { next(error); }
   },
+  async listArchived(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try { res.status(200).json({ cvs: await cvService.list(userId(req), typeof req.query.profileId === 'string' ? req.query.profileId : undefined, true) }); }
+    catch (error) { next(error); }
+  },
   async get(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ cv: await cvService.get(userId(req), routeParam(req, 'cvId')) }); }
     catch (error) { next(error); }
@@ -52,6 +56,20 @@ export const cvController = {
   async update(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try { res.status(200).json({ cv: await cvService.update(userId(req), routeParam(req, 'cvId'), updateCvSchema.parse(req.body)) }); }
     catch (error) { next(error); }
+  },
+  async archive(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try { res.status(200).json({ cv: await cvService.archive(userId(req), routeParam(req, 'cvId')) }); }
+    catch (error) { next(error); }
+  },
+  async restore(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try { res.status(200).json({ cv: await cvService.restore(userId(req), routeParam(req, 'cvId')) }); }
+    catch (error) { next(error); }
+  },
+  async remove(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await cvService.remove(userId(req), routeParam(req, 'cvId'));
+      res.status(204).send();
+    } catch (error) { next(error); }
   },
   async linkProfile(this: void, req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
