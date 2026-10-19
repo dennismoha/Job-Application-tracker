@@ -1,7 +1,7 @@
 
 import { BadRequestError } from '../../shared/http/http-error.js';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { PDFDict, PDFName, PDFRawStream } from 'pdf-lib/cjs/core/index.js';
+import { env } from '../../config/env.js';
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
@@ -689,38 +689,6 @@ function renderHtmlSection(section: CvSection, sidebar = false): string {
   return `<section class="${sidebar ? 'sidebar-section' : 'main-section'}"><h2>${htmlEscape(section.heading)}</h2>${lines}</section>`;
 }
 
-function extractPortraitJpeg(template: PDFDocument): Buffer | undefined {
-  const candidates: Array<{ data: Buffer; area: number }> = [];
-  try {
-    for (const page of template.getPages()) {
-      const resources = page.node.Resources();
-      const xObjects = resources?.lookup(PDFName.of('XObject'), PDFDict);
-      if (!xObjects) continue;
-      for (const key of xObjects.keys()) {
-        const image = xObjects.lookup(key);
-        if (!(image instanceof PDFRawStream)) continue;
-        if (image.dict.lookup(PDFName.of('Subtype'))?.toString() !== '/Image') continue;
-        if (image.dict.lookup(PDFName.of('Filter'))?.toString() !== '/DCTDecode') continue;
-        const imageWidth = image.dict.lookup(PDFName.of('Width'));
-        const imageHeight = image.dict.lookup(PDFName.of('Height'));
-        if (!imageWidth || !imageHeight) continue;
-        const width = Number(imageWidth.toString());
-        const height = Number(imageHeight.toString());
-        const ratio = width / height;
-        if (width < 100 || height < 100 || ratio < 0.55 || ratio > 1.2) continue;
-        candidates.push({ data: Buffer.from(image.getContents()), area: width * height });
-      }
-    }
-  } catch {
-    // Portrait extraction is optional; unsupported PDF image structures should
-    // still allow the HTML renderer to produce a preview with its placeholder.
-    return undefined;
-  }
-  // CV portraits tend to be the smallest near-square JPEG in a template; ignore
-  // full-page scans and wide decorative images when selecting the candidate.
-  return candidates.sort((a, b) => a.area - b.area)[0]?.data;
-}
-
 /**
  * Render a CV with HTML and print CSS, using the supplied PDF for its page dimensions.
  * This is intentionally separate from createCvPdfFromTemplate so callers can compare
@@ -729,7 +697,6 @@ function extractPortraitJpeg(template: PDFDocument): Buffer | undefined {
 export async function createCvPdfFromHtmlTemplate(
   text: string,
   templateBuffer: Buffer,
-  portrait?: { buffer: Buffer; mimeType: 'image/jpeg' | 'image/png' },
 ): Promise<Buffer> {
   let template: PDFDocument;
   try {
@@ -740,48 +707,15 @@ export async function createCvPdfFromHtmlTemplate(
   const firstPage = template.getPage(0);
   if (!firstPage) throw new BadRequestError('The original CV PDF template has no pages.');
   const { width, height } = firstPage.getSize();
-  const portraitImage = portrait ?? (() => {
-    const data = extractPortraitJpeg(template);
-    return data ? { buffer: data, mimeType: 'image/jpeg' as const } : undefined;
-  })();
+  const portraitUrl = env.CV_PORTRAIT_IMAGE_URL;
   const layout = parseCvLayout(text);
   const sidebar = layout.sidebar
     .filter(({ heading }) => ['CONTACT', 'BIO DATA', 'CORE SKILLS', 'INTERESTS'].includes(heading.toUpperCase()))
     .map((section) => renderHtmlSection(section, true)).join('');
   const main = layout.main.map((section) => renderHtmlSection(section)).join('');
-  const portraitMarkup = portraitImage
-    ? `<img class="portrait-image" src="data:${portraitImage.mimeType};base64,${portraitImage.buffer.toString('base64')}" alt="CV portrait">`
+  const portraitMarkup = portraitUrl
+    ? `<img class="portrait-image" src="${htmlEscape(portraitUrl)}" alt="CV portrait">`
     : '<div class="portrait-placeholder" aria-hidden="true"></div>';
-  //   const html = `<!doctype html>
-  // <html lang="en"><head><meta charset="utf-8"><style>
-  //   @page { size: ${width}pt ${height}pt; margin: 18pt 0 0; }
-  //   * { box-sizing: border-box; }
-  //   html, body { margin: 0; padding: 0; }
-  //   body { color: #202b35; font-family: Georgia, 'Times New Roman', serif; font-size: 9.6pt; line-height: 1.24; }
-  //   body::before { content: ''; position: fixed; z-index: -1; inset: 0 auto 0 6.54%; width: 26.47%; background: #173b59; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  //   .cv { display: grid; grid-template-columns: 29% 71%; align-items: start; min-height: ${height - 18}pt; padding: 12pt 28pt 34pt; }
-  //   .sidebar { color: #fff; background: #173b59; margin-left: 12pt; padding: 0 13pt 18pt 8pt; }
-  //   .portrait-frame { height: 205pt; margin: -12pt -25pt 21pt -8pt; padding: 28pt; background: #e8edf1; display: grid; place-items: center; }
-  //   .portrait-image { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
-  //   .portrait-placeholder { width: 100%; height: 100%; background: #fff; }
-  //   .main { background: #fff; padding: 0 0 0 10pt; min-width: 0; }
-  //   h1 { color: #173b59; font-family: Georgia, 'Times New Roman', serif; font-size: 23pt; font-weight: 400; letter-spacing: .15pt; line-height: 1.08; margin: 0 0 7pt; text-transform: uppercase; }
-  //   .role { color: #496b86; font-size: 12.5pt; margin: 0 0 10pt; text-transform: uppercase; }
-  //   h2 { color: #173b59; font-family: Georgia, 'Times New Roman', serif; font-size: 11.5pt; font-weight: 400; line-height: 1.15; margin: 8pt 0 3.5pt; text-transform: uppercase; break-after: avoid-page; }
-  //   .sidebar h2 { color: #fff; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; margin-top: 0; }
-  //   p { margin: 0 0 2.2pt; overflow-wrap: anywhere; orphans: 2; widows: 2; }
-  //   .bullet { position: relative; padding-left: 9pt; }
-  //   .bullet::before { content: '•'; position: absolute; left: 0; }
-  //   .sidebar p { color: #fff; margin-bottom: 2.2pt; }
-  //   .sidebar-section { margin-bottom: 15pt; break-inside: avoid-page; }
-  //   .main-section { break-inside: auto; }
-  //   .main-section .role-line { font-weight: 700; margin-top: 5pt; margin-bottom: 2.5pt; break-after: avoid-page; }
-  //   .main-section .bullet { font-weight: 400; }
-  //   @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
-  // </style></head><body><div class="cv">
-  //   <aside class="sidebar"><div class="portrait-frame">${portraitMarkup}</div>${sidebar}</aside>
-  //   <main class="main"><h1>${htmlEscape(layout.name)}</h1>${layout.role ? `<p class="role">${htmlEscape(layout.role)}</p>` : ''}${main}</main>
-  // </div></body></html>`;
 
   const html = `<!doctype html>
 <html lang="en">
@@ -846,7 +780,7 @@ export async function createCvPdfFromHtmlTemplate(
     .portrait-frame {
       height: 205pt;
       margin: -12pt -12pt 21pt 0;
-      padding: 28pt;
+      padding: 18pt;
       background: #e8edf1;
       display: grid;
       place-items: center;
